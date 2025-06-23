@@ -1,4 +1,5 @@
 //! Generate SPI buffers for Semtech SX126x SPI commands.
+#![allow(clippy::new_without_default)]
 
 use super::registers::Register;
 use bitfield_struct::bitfield;
@@ -250,7 +251,7 @@ impl WriteRegister {
                 Self::OPCODE,
                 (R::ADDRESS >> 8) as u8,
                 R::ADDRESS as u8,
-                register.into_bits(),
+                register.bits(),
             ],
             rx_buf: [0; 4],
         }
@@ -1035,7 +1036,7 @@ impl SetPacketParams {
                 ((preamble_length >> 8) & 0xFF) as u8,
                 (preamble_length & 0xFF) as u8,
                 header_type as u8,
-                payload_length as u8,
+                payload_length,
                 crc_type as u8,
                 invert_iq as u8,
             ],

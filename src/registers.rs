@@ -3,7 +3,7 @@
 #[const_trait]
 pub trait Register: Copy {
     const ADDRESS: u16;
-    fn into_bits(&self) -> u8;
+    fn bits(&self) -> u8;
     fn from_bits(bits: u8) -> Self;
 }
 
@@ -12,7 +12,7 @@ pub struct LoraSyncWordMsb(pub u8);
 
 impl const Register for LoraSyncWordMsb {
     const ADDRESS: u16 = 0x0740;
-    fn into_bits(&self) -> u8 {
+    fn bits(&self) -> u8 {
         self.0
     }
     fn from_bits(bits: u8) -> Self {
@@ -25,7 +25,7 @@ pub struct LoraSyncWordLsb(pub u8);
 
 impl const Register for LoraSyncWordLsb {
     const ADDRESS: u16 = 0x0741;
-    fn into_bits(&self) -> u8 {
+    fn bits(&self) -> u8 {
         self.0
     }
     fn from_bits(bits: u8) -> Self {

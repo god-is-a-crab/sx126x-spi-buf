@@ -37,6 +37,7 @@ pub struct SetSleep {
     pub rx_buf: [u8; 2],
 }
 impl SetSleep {
+    #[inline(always)]
     pub const fn new(sleep_config: SleepConfig) -> Self {
         Self {
             tx_buf: [Self::OPCODE, sleep_config.into_bits()],
@@ -47,6 +48,7 @@ impl SetSleep {
 impl const SpiCommand for SetSleep {
     const OPCODE: u8 = 0x84;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -83,6 +85,7 @@ pub struct SetStandby {
     pub rx_buf: [u8; 2],
 }
 impl SetStandby {
+    #[inline(always)]
     pub const fn new(stdby_config: StdbyConfig) -> Self {
         Self {
             tx_buf: [Self::OPCODE, stdby_config as u8],
@@ -93,6 +96,7 @@ impl SetStandby {
 impl const SpiCommand for SetStandby {
     const OPCODE: u8 = 0x80;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -124,6 +128,7 @@ pub struct SetTx {
     pub rx_buf: [u8; 4],
 }
 impl SetTx {
+    #[inline(always)]
     pub const fn new(timeout: u32) -> Self {
         Self {
             tx_buf: [
@@ -139,6 +144,7 @@ impl SetTx {
 impl const SpiCommand for SetTx {
     const OPCODE: u8 = 0x83;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -165,6 +171,7 @@ pub struct SetRx {
     pub rx_buf: [u8; 4],
 }
 impl SetRx {
+    #[inline(always)]
     pub const fn new(timeout: u32) -> Self {
         Self {
             tx_buf: [
@@ -180,6 +187,7 @@ impl SetRx {
 impl const SpiCommand for SetRx {
     const OPCODE: u8 = 0x82;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -206,6 +214,7 @@ pub struct SetPaConfig {
     pub rx_buf: [u8; 5],
 }
 impl SetPaConfig {
+    #[inline(always)]
     pub const fn new(pa_duty_cycle: u8, hp_max: u8) -> Self {
         Self {
             tx_buf: [Self::OPCODE, pa_duty_cycle, hp_max, 0x00, 0x01], // Doesn't support SX1261
@@ -216,6 +225,7 @@ impl SetPaConfig {
 impl const SpiCommand for SetPaConfig {
     const OPCODE: u8 = 0x95;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -242,6 +252,7 @@ pub struct WriteRegister {
     pub rx_buf: [u8; 4],
 }
 impl WriteRegister {
+    #[inline(always)]
     pub const fn new<R: const Register>(register: R) -> Self {
         Self {
             tx_buf: [
@@ -257,6 +268,7 @@ impl WriteRegister {
 impl const SpiCommand for WriteRegister {
     const OPCODE: u8 = 0x0D;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -286,6 +298,7 @@ pub struct ReadRegister<R> {
     register: PhantomData<R>,
 }
 impl<R: const Register> ReadRegister<R> {
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [
@@ -299,6 +312,7 @@ impl<R: const Register> ReadRegister<R> {
             register: PhantomData,
         }
     }
+    #[inline(always)]
     pub const fn register(&self) -> R {
         R::from_bits(self.rx_buf[4])
     }
@@ -309,6 +323,7 @@ where
 {
     const OPCODE: u8 = 0x1D;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -342,6 +357,7 @@ pub struct WriteBuffer<const N: usize> {
     data_length: u16,
 }
 impl<const N: usize> WriteBuffer<N> {
+    #[inline(always)]
     pub const fn new(offset: u8, data: [u8; N - 2]) -> Self {
         let mut tx_buf = [0; N];
         tx_buf[0] = Self::OPCODE;
@@ -357,6 +373,7 @@ impl<const N: usize> WriteBuffer<N> {
             data_length: N as u16 - 2,
         }
     }
+    #[inline(always)]
     pub const fn set_data_length(&mut self, data_length: u16) {
         self.data_length = data_length;
     }
@@ -364,6 +381,7 @@ impl<const N: usize> WriteBuffer<N> {
 impl<const N: usize> const SpiCommand for WriteBuffer<N> {
     const OPCODE: u8 = 0x0E;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -399,6 +417,7 @@ pub struct ReadBuffer<const N: usize> {
     data_length: u16,
 }
 impl<const N: usize> ReadBuffer<N> {
+    #[inline(always)]
     pub const fn new(offset: u8) -> Self {
         let mut tx_buf = [0; N];
         tx_buf[0] = Self::OPCODE;
@@ -409,9 +428,11 @@ impl<const N: usize> ReadBuffer<N> {
             data_length: N as u16 - 3,
         }
     }
+    #[inline(always)]
     pub const fn set_data_length(&mut self, data_length: u16) {
         self.data_length = data_length;
     }
+    #[inline(always)]
     pub fn data(&self) -> &[u8] {
         &self.rx_buf[3..3 + self.data_length as usize]
     }
@@ -419,6 +440,7 @@ impl<const N: usize> ReadBuffer<N> {
 impl<const N: usize> const SpiCommand for ReadBuffer<N> {
     const OPCODE: u8 = 0x1E;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -451,6 +473,7 @@ pub struct SetDioIrqParams {
 impl SetDioIrqParams {
     const OPCODE: u8 = 0x08;
 
+    #[inline(always)]
     pub const fn new(irq_mask: Irq, dio1_mask: Irq, dio2_mask: Irq, dio3_mask: Irq) -> Self {
         Self {
             tx_buf: [
@@ -471,6 +494,7 @@ impl SetDioIrqParams {
 impl const SpiCommand for SetDioIrqParams {
     const OPCODE: u8 = 0x08;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -528,6 +552,7 @@ pub struct GetIrqStatus {
     pub rx_buf: [u8; 4],
 }
 impl GetIrqStatus {
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0, 0, 0],
@@ -535,6 +560,7 @@ impl GetIrqStatus {
         }
     }
 
+    #[inline(always)]
     pub const fn irq_status(&self) -> Irq {
         Irq::from_bits((self.rx_buf[2] as u16) << 8 | (self.rx_buf[3] as u16))
     }
@@ -542,6 +568,7 @@ impl GetIrqStatus {
 impl const SpiCommand for GetIrqStatus {
     const OPCODE: u8 = 0x12;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -569,6 +596,7 @@ pub struct ClearIrqStatus {
     pub rx_buf: [u8; 3],
 }
 impl ClearIrqStatus {
+    #[inline(always)]
     pub const fn new(clear_irq_param: Irq) -> Self {
         Self {
             tx_buf: [
@@ -583,6 +611,7 @@ impl ClearIrqStatus {
 impl const SpiCommand for ClearIrqStatus {
     const OPCODE: u8 = 0x02;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -609,6 +638,7 @@ pub struct SetDio2AsRfSwitchCtrl {
     pub rx_buf: [u8; 2],
 }
 impl SetDio2AsRfSwitchCtrl {
+    #[inline(always)]
     pub const fn new(enable: bool) -> Self {
         Self {
             tx_buf: [Self::OPCODE, enable as u8],
@@ -619,6 +649,7 @@ impl SetDio2AsRfSwitchCtrl {
 impl const SpiCommand for SetDio2AsRfSwitchCtrl {
     const OPCODE: u8 = 0x9D;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -645,6 +676,7 @@ pub struct SetDio3AsTcxoCtrl {
     pub rx_buf: [u8; 5],
 }
 impl SetDio3AsTcxoCtrl {
+    #[inline(always)]
     pub const fn new(tcxo_voltage: TcxoVoltage, delay: u32) -> Self {
         Self {
             tx_buf: [
@@ -661,6 +693,7 @@ impl SetDio3AsTcxoCtrl {
 impl const SpiCommand for SetDio3AsTcxoCtrl {
     const OPCODE: u8 = 0x97;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -698,6 +731,7 @@ pub struct SetRfFrequency {
     pub rx_buf: [u8; 5],
 }
 impl SetRfFrequency {
+    #[inline(always)]
     pub const fn new(rf_freq: u32) -> Self {
         Self {
             tx_buf: [
@@ -714,6 +748,7 @@ impl SetRfFrequency {
 impl const SpiCommand for SetRfFrequency {
     const OPCODE: u8 = 0x86;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -739,6 +774,7 @@ pub struct SetPacketType {
     pub rx_buf: [u8; 2],
 }
 impl SetPacketType {
+    #[inline(always)]
     pub const fn new(packet_type: PacketType) -> Self {
         Self {
             tx_buf: [Self::OPCODE, packet_type as u8],
@@ -749,6 +785,7 @@ impl SetPacketType {
 impl const SpiCommand for SetPacketType {
     const OPCODE: u8 = 0x8A;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -766,6 +803,7 @@ pub enum PacketType {
     LrFhss = 0x03,
 }
 impl PacketType {
+    #[inline(always)]
     pub const fn from(value: u8) -> Self {
         unsafe { core::mem::transmute(value & 0x03) }
     }
@@ -788,12 +826,14 @@ pub struct GetPacketType {
     pub rx_buf: [u8; 3],
 }
 impl GetPacketType {
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0, 0],
             rx_buf: [0; 3],
         }
     }
+    #[inline(always)]
     pub const fn packet_type(&self) -> PacketType {
         PacketType::from(self.rx_buf[2])
     }
@@ -801,6 +841,7 @@ impl GetPacketType {
 impl const SpiCommand for GetPacketType {
     const OPCODE: u8 = 0x11;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -826,6 +867,7 @@ pub struct SetTxParams {
     pub rx_buf: [u8; 3],
 }
 impl SetTxParams {
+    #[inline(always)]
     pub const fn new(power: u8, ramp_time: RampTime) -> Self {
         Self {
             tx_buf: [Self::OPCODE, power, ramp_time as u8],
@@ -836,6 +878,7 @@ impl SetTxParams {
 impl const SpiCommand for SetTxParams {
     const OPCODE: u8 = 0x8E;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -857,6 +900,7 @@ pub enum RampTime {
     Ramp3400U = 0x07,
 }
 impl RampTime {
+    #[inline(always)]
     pub const fn from(value: u8) -> Self {
         unsafe { core::mem::transmute(value & 0x07) }
     }
@@ -883,6 +927,7 @@ pub struct SetModulationParamsLora {
     pub rx_buf: [u8; 5],
 }
 impl SetModulationParamsLora {
+    #[inline(always)]
     pub const fn new(sf: Sf, bw: Bw, cr: Cr, low_data_rate_optimize: bool) -> Self {
         Self {
             tx_buf: [
@@ -899,6 +944,7 @@ impl SetModulationParamsLora {
 impl const SpiCommand for SetModulationParamsLora {
     const OPCODE: u8 = 0x8B;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -927,6 +973,7 @@ pub enum Sf {
     Reserved8 = 0x0F,
 }
 impl Sf {
+    #[inline(always)]
     pub const fn from(value: u8) -> Self {
         unsafe { core::mem::transmute(value & 0x0F) }
     }
@@ -950,6 +997,7 @@ pub enum Bw {
     Reserved5 = 0x0F,
 }
 impl Bw {
+    #[inline(always)]
     pub const fn from(value: u8) -> Self {
         unsafe { core::mem::transmute(value & 0x0F) }
     }
@@ -966,6 +1014,7 @@ pub enum Cr {
     Cr4_8Li = 0x07,
 }
 impl Cr {
+    #[inline(always)]
     pub const fn from(value: u8) -> Self {
         unsafe { core::mem::transmute(value & 0x07) }
     }
@@ -993,6 +1042,7 @@ pub struct SetPacketParams {
     pub rx_buf: [u8; 7],
 }
 impl SetPacketParams {
+    #[inline(always)]
     pub const fn new(
         preamble_length: u16,
         header_type: HeaderType,
@@ -1017,6 +1067,7 @@ impl SetPacketParams {
 impl const SpiCommand for SetPacketParams {
     const OPCODE: u8 = 0x8C;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -1032,6 +1083,7 @@ pub enum HeaderType {
     FixedLength = 0x01,
 }
 impl HeaderType {
+    #[inline(always)]
     pub const fn from(value: u8) -> Self {
         unsafe { core::mem::transmute(value & 0x01) }
     }
@@ -1043,6 +1095,7 @@ pub enum InvertIq {
     Inverted = 0x01,
 }
 impl InvertIq {
+    #[inline(always)]
     pub const fn from(value: u8) -> Self {
         unsafe { core::mem::transmute(value & 0x01) }
     }
@@ -1064,6 +1117,7 @@ pub struct SetBufferBaseAddress {
     pub rx_buf: [u8; 3],
 }
 impl SetBufferBaseAddress {
+    #[inline(always)]
     pub const fn new(tx_base_address: u8, rx_base_address: u8) -> Self {
         Self {
             tx_buf: [Self::OPCODE, tx_base_address, rx_base_address],
@@ -1074,6 +1128,7 @@ impl SetBufferBaseAddress {
 impl const SpiCommand for SetBufferBaseAddress {
     const OPCODE: u8 = 0x8F;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -1100,6 +1155,7 @@ pub struct SetLoraSymbNumTimeout {
     pub rx_buf: [u8; 2],
 }
 impl SetLoraSymbNumTimeout {
+    #[inline(always)]
     pub const fn new(symb_num: u8) -> Self {
         Self {
             tx_buf: [Self::OPCODE, symb_num],
@@ -1110,6 +1166,7 @@ impl SetLoraSymbNumTimeout {
 impl const SpiCommand for SetLoraSymbNumTimeout {
     const OPCODE: u8 = 0xA0;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -1138,17 +1195,18 @@ pub struct GetStatus {
     pub rx_buf: [u8; 2],
 }
 impl GetStatus {
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0],
             rx_buf: [0; 2],
         }
     }
-
+    #[inline(always)]
     pub const fn chip_mode(&self) -> StatusChipMode {
         StatusChipMode::extract(self.rx_buf[1])
     }
-
+    #[inline(always)]
     pub const fn command_status(&self) -> StatusCommandStatus {
         StatusCommandStatus::extract(self.rx_buf[1])
     }
@@ -1156,6 +1214,7 @@ impl GetStatus {
 impl const SpiCommand for GetStatus {
     const OPCODE: u8 = 0xC0;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -1177,6 +1236,7 @@ pub enum StatusChipMode {
     Reserved2 = 0x07,
 }
 impl StatusChipMode {
+    #[inline(always)]
     pub const fn extract(value: u8) -> Self {
         unsafe { core::mem::transmute((value >> 4) & 0x07) }
     }
@@ -1194,6 +1254,7 @@ pub enum StatusCommandStatus {
     Reserved3 = 0x07,
 }
 impl StatusCommandStatus {
+    #[inline(always)]
     pub const fn extract(value: u8) -> Self {
         unsafe { core::mem::transmute((value >> 1) & 0x03) }
     }
@@ -1220,15 +1281,18 @@ pub struct GetRxBufferStatus {
     pub rx_buf: [u8; 4],
 }
 impl GetRxBufferStatus {
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0, 0, 0],
             rx_buf: [0; 4],
         }
     }
+    #[inline(always)]
     pub const fn payload_length_rx(&self) -> u8 {
         self.rx_buf[2]
     }
+    #[inline(always)]
     pub const fn rx_start_buffer_pointer(&self) -> u8 {
         self.rx_buf[3]
     }
@@ -1236,6 +1300,7 @@ impl GetRxBufferStatus {
 impl const SpiCommand for GetRxBufferStatus {
     const OPCODE: u8 = 0x13;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -1269,18 +1334,22 @@ pub struct GetPacketStatusLora {
 }
 
 impl GetPacketStatusLora {
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0, 0, 0, 0],
             rx_buf: [0; 5],
         }
     }
+    #[inline(always)]
     pub const fn rssi_pkt(&self) -> i8 {
         -((self.rx_buf[2] / 2) as i8)
     }
+    #[inline(always)]
     pub const fn snr_pkt(&self) -> i8 {
         (self.rx_buf[3] as i8) / 4
     }
+    #[inline(always)]
     pub const fn signal_rssi_pkt(&self) -> i8 {
         -((self.rx_buf[4] / 2) as i8)
     }
@@ -1288,6 +1357,7 @@ impl GetPacketStatusLora {
 impl const SpiCommand for GetPacketStatusLora {
     const OPCODE: u8 = 0x14;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -1323,18 +1393,22 @@ pub struct GetStatsLora {
     pub rx_buf: [u8; 8],
 }
 impl GetStatsLora {
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0, 0, 0, 0, 0, 0, 0],
             rx_buf: [0; 8],
         }
     }
+    #[inline(always)]
     pub const fn nb_pkt_received(&self) -> u16 {
         (self.rx_buf[2] as u16) << 8 | (self.rx_buf[3]) as u16
     }
+    #[inline(always)]
     pub const fn nb_pkt_crc_error(&self) -> u16 {
         (self.rx_buf[4] as u16) << 8 | (self.rx_buf[5]) as u16
     }
+    #[inline(always)]
     pub const fn nb_pkt_header_err(&self) -> u16 {
         (self.rx_buf[6] as u16) << 8 | (self.rx_buf[7]) as u16
     }
@@ -1342,6 +1416,7 @@ impl GetStatsLora {
 impl const SpiCommand for GetStatsLora {
     const OPCODE: u8 = 0x10;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -1368,6 +1443,7 @@ pub struct ResetStats {
     pub rx_buf: [u8; 7],
 }
 impl ResetStats {
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0, 0, 0, 0, 0, 0],
@@ -1378,6 +1454,7 @@ impl ResetStats {
 impl const SpiCommand for ResetStats {
     const OPCODE: u8 = 0x00;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -1407,12 +1484,14 @@ pub struct GetDeviceErrors {
     pub rx_buf: [u8; 4],
 }
 impl GetDeviceErrors {
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0, 0, 0],
             rx_buf: [0; 4],
         }
     }
+    #[inline(always)]
     pub const fn op_error(&self) -> OpError {
         OpError::from_bits((self.rx_buf[2] as u16) << 8 | self.rx_buf[3] as u16)
     }
@@ -1420,6 +1499,7 @@ impl GetDeviceErrors {
 impl const SpiCommand for GetDeviceErrors {
     const OPCODE: u8 = 0x17;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
@@ -1470,6 +1550,7 @@ pub struct ClearDeviceErrors {
     pub rx_buf: [u8; 3],
 }
 impl ClearDeviceErrors {
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0, 0],
@@ -1480,6 +1561,7 @@ impl ClearDeviceErrors {
 impl const SpiCommand for ClearDeviceErrors {
     const OPCODE: u8 = 0x07;
 
+    #[inline(always)]
     fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),

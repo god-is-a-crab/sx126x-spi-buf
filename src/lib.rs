@@ -13,9 +13,7 @@ pub mod registers;
 
 #[cfg(test)]
 mod tests {
-    use super::commands::{
-        self, SetSleep, SetStandby, SleepConfig, SpiCommand, StdbyConfig, WriteBuffer,
-    };
+    use super::commands::{self, SetSleep, SetStandby, SleepConfig, StdbyConfig, WriteBuffer};
     use static_fifo_queue::Queue;
 
     #[test]

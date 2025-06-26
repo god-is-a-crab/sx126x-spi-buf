@@ -5,14 +5,6 @@ use super::registers::Register;
 use bitfield_struct::bitfield;
 use core::marker::PhantomData;
 
-#[const_trait]
-pub trait SpiCommand {
-    const OPCODE: u8;
-    /// Returns an SPI descriptor containing pointers to the buffers and the
-    /// length of the transfer.
-    fn descriptor(&mut self) -> SpiDescriptor;
-}
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct SpiDescriptor {
     pub tx_buf_ptr: *const u8,
@@ -25,7 +17,7 @@ pub struct SpiDescriptor {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetSleep, SleepConfig};
+/// use sx126x_spi_buffers::commands::{SetSleep, SleepConfig};
 ///
 /// const SET_SLEEP: SetSleep = SetSleep::new(SleepConfig::new().with_warm_start(true));
 /// assert_eq!(SET_SLEEP.tx_buf, [0x84, 0x04]);
@@ -37,6 +29,8 @@ pub struct SetSleep {
     pub rx_buf: [u8; 2],
 }
 impl SetSleep {
+    const OPCODE: u8 = 0x84;
+
     #[inline(always)]
     pub const fn new(sleep_config: SleepConfig) -> Self {
         Self {
@@ -44,12 +38,8 @@ impl SetSleep {
             rx_buf: [0; 2],
         }
     }
-}
-impl const SpiCommand for SetSleep {
-    const OPCODE: u8 = 0x84;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -73,7 +63,7 @@ pub struct SleepConfig {
 /// Sets the device to standby mode.
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetStandby, StdbyConfig};
+/// use sx126x_spi_buffers::commands::{SetStandby, StdbyConfig};
 ///
 /// const SET_STANDBY: SetStandby = SetStandby::new(StdbyConfig::StdbyXosc);
 /// assert_eq!(SET_STANDBY.tx_buf, [0x80, 1]);
@@ -85,6 +75,8 @@ pub struct SetStandby {
     pub rx_buf: [u8; 2],
 }
 impl SetStandby {
+    const OPCODE: u8 = 0x80;
+
     #[inline(always)]
     pub const fn new(stdby_config: StdbyConfig) -> Self {
         Self {
@@ -92,12 +84,8 @@ impl SetStandby {
             rx_buf: [0; 2],
         }
     }
-}
-impl const SpiCommand for SetStandby {
-    const OPCODE: u8 = 0x80;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -116,7 +104,7 @@ pub enum StdbyConfig {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetTx};
+/// use sx126x_spi_buffers::commands::SetTx;
 ///
 /// const SET_TX: SetTx = SetTx::new(6862921);
 /// assert_eq!(SET_TX.tx_buf, [0x83, 104, 184, 73]);
@@ -128,6 +116,8 @@ pub struct SetTx {
     pub rx_buf: [u8; 4],
 }
 impl SetTx {
+    const OPCODE: u8 = 0x83;
+
     #[inline(always)]
     pub const fn new(timeout: u32) -> Self {
         Self {
@@ -140,12 +130,8 @@ impl SetTx {
             rx_buf: [0; 4],
         }
     }
-}
-impl const SpiCommand for SetTx {
-    const OPCODE: u8 = 0x83;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -159,7 +145,7 @@ impl const SpiCommand for SetTx {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetRx};
+/// use sx126x_spi_buffers::commands::SetRx;
 ///
 /// const SET_RX: SetRx = SetRx::new(120);
 /// assert_eq!(SET_RX.tx_buf, [0x82, 0, 0, 120]);
@@ -171,6 +157,8 @@ pub struct SetRx {
     pub rx_buf: [u8; 4],
 }
 impl SetRx {
+    const OPCODE: u8 = 0x82;
+
     #[inline(always)]
     pub const fn new(timeout: u32) -> Self {
         Self {
@@ -183,12 +171,8 @@ impl SetRx {
             rx_buf: [0; 4],
         }
     }
-}
-impl const SpiCommand for SetRx {
-    const OPCODE: u8 = 0x82;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -202,7 +186,7 @@ impl const SpiCommand for SetRx {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetPaConfig};
+/// use sx126x_spi_buffers::commands::SetPaConfig;
 ///
 /// const SET_PA_CONFIG: SetPaConfig = SetPaConfig::new(0x04, 0x07);
 /// assert_eq!(SET_PA_CONFIG.tx_buf, [0x95, 0x04, 0x07, 0x00, 0x01]);
@@ -214,6 +198,8 @@ pub struct SetPaConfig {
     pub rx_buf: [u8; 5],
 }
 impl SetPaConfig {
+    const OPCODE: u8 = 0x95;
+
     #[inline(always)]
     pub const fn new(pa_duty_cycle: u8, hp_max: u8) -> Self {
         Self {
@@ -221,12 +207,8 @@ impl SetPaConfig {
             rx_buf: [0; 5],
         }
     }
-}
-impl const SpiCommand for SetPaConfig {
-    const OPCODE: u8 = 0x95;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -240,7 +222,7 @@ impl const SpiCommand for SetPaConfig {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::{registers, commands::{SpiCommand, WriteRegister}};
+/// use sx126x_spi_buffers::{registers, commands::{WriteRegister}};
 ///
 /// const WRITE_REGISTER: WriteRegister = WriteRegister::new(registers::LoraSyncWordMsb(0x48));
 /// assert_eq!(WRITE_REGISTER.tx_buf, [0x0D, 0x07, 0x40, 0x48]);
@@ -252,6 +234,8 @@ pub struct WriteRegister {
     pub rx_buf: [u8; 4],
 }
 impl WriteRegister {
+    const OPCODE: u8 = 0x0D;
+
     #[inline(always)]
     pub const fn new<R: const Register>(register: R) -> Self {
         Self {
@@ -264,12 +248,8 @@ impl WriteRegister {
             rx_buf: [0; 4],
         }
     }
-}
-impl const SpiCommand for WriteRegister {
-    const OPCODE: u8 = 0x0D;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -283,7 +263,7 @@ impl const SpiCommand for WriteRegister {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::{registers, commands::{SpiCommand, ReadRegister}};
+/// use sx126x_spi_buffers::{registers, commands::{ReadRegister}};
 ///
 /// let mut read_register: ReadRegister<registers::LoraSyncWordLsb> = ReadRegister::new();
 /// assert_eq!(read_register.tx_buf, [0x1D, 0x07, 0x41, 0, 0]);
@@ -298,6 +278,8 @@ pub struct ReadRegister<R> {
     register: PhantomData<R>,
 }
 impl<R: const Register> ReadRegister<R> {
+    const OPCODE: u8 = 0x1D;
+
     #[inline(always)]
     pub const fn new() -> Self {
         Self {
@@ -313,23 +295,16 @@ impl<R: const Register> ReadRegister<R> {
         }
     }
     #[inline(always)]
-    pub const fn register(&self) -> R {
-        R::from_bits(self.rx_buf[4])
-    }
-}
-impl<R> const SpiCommand for ReadRegister<R>
-where
-    R: const Register,
-{
-    const OPCODE: u8 = 0x1D;
-
-    #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
             transfer_length: 5,
         }
+    }
+    #[inline(always)]
+    pub const fn register(&self) -> R {
+        R::from_bits(self.rx_buf[4])
     }
 }
 
@@ -342,7 +317,7 @@ where
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, WriteBuffer};
+/// use sx126x_spi_buffers::commands::WriteBuffer;
 ///
 /// let mut write_buffer: WriteBuffer<7> = WriteBuffer::new(0x10, [b'h', b'e', b'l', b'l', b'o'].into());
 /// assert_eq!(write_buffer.tx_buf, [0x0E, 0x10, b'h', b'e', b'l', b'l', b'o']);
@@ -357,6 +332,8 @@ pub struct WriteBuffer<const N: usize> {
     data_length: u16,
 }
 impl<const N: usize> WriteBuffer<N> {
+    const OPCODE: u8 = 0x0E;
+
     #[inline(always)]
     pub const fn new(offset: u8, data: [u8; N - 2]) -> Self {
         let mut tx_buf = [0; N];
@@ -374,20 +351,16 @@ impl<const N: usize> WriteBuffer<N> {
         }
     }
     #[inline(always)]
-    pub const fn set_data_length(&mut self, data_length: u16) {
-        self.data_length = data_length;
-    }
-}
-impl<const N: usize> const SpiCommand for WriteBuffer<N> {
-    const OPCODE: u8 = 0x0E;
-
-    #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
             transfer_length: self.data_length + 2,
         }
+    }
+    #[inline(always)]
+    pub const fn set_data_length(&mut self, data_length: u16) {
+        self.data_length = data_length;
     }
 }
 
@@ -399,7 +372,7 @@ impl<const N: usize> const SpiCommand for WriteBuffer<N> {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, ReadBuffer};
+/// use sx126x_spi_buffers::commands::ReadBuffer;
 ///
 /// let mut read_buffer: ReadBuffer<8> = ReadBuffer::new(0x17);
 /// assert_eq!(read_buffer.tx_buf, [0x1E, 0x17, 0, 0, 0, 0, 0, 0]);
@@ -417,6 +390,8 @@ pub struct ReadBuffer<const N: usize> {
     data_length: u16,
 }
 impl<const N: usize> ReadBuffer<N> {
+    const OPCODE: u8 = 0x1E;
+
     #[inline(always)]
     pub const fn new(offset: u8) -> Self {
         let mut tx_buf = [0; N];
@@ -429,6 +404,14 @@ impl<const N: usize> ReadBuffer<N> {
         }
     }
     #[inline(always)]
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: self.data_length + 3,
+        }
+    }
+    #[inline(always)]
     pub const fn set_data_length(&mut self, data_length: u16) {
         self.data_length = data_length;
     }
@@ -437,25 +420,13 @@ impl<const N: usize> ReadBuffer<N> {
         &self.rx_buf[3..3 + self.data_length as usize]
     }
 }
-impl<const N: usize> const SpiCommand for ReadBuffer<N> {
-    const OPCODE: u8 = 0x1E;
-
-    #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
-        SpiDescriptor {
-            tx_buf_ptr: self.tx_buf.as_ptr(),
-            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
-            transfer_length: self.data_length + 3,
-        }
-    }
-}
 
 /// # SetDioIrqParams command
 /// Sets the DIO IRQ parameters for the device.
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetDioIrqParams, Irq};
+/// use sx126x_spi_buffers::commands::{SetDioIrqParams, Irq};
 /// const SET_DIO_IRQ_PARAMS: SetDioIrqParams = SetDioIrqParams::new(
 ///     Irq::new().with_tx_done(true),
 ///     Irq::new().with_rx_done(true),
@@ -490,12 +461,8 @@ impl SetDioIrqParams {
             rx_buf: [0; 9],
         }
     }
-}
-impl const SpiCommand for SetDioIrqParams {
-    const OPCODE: u8 = 0x08;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -539,7 +506,7 @@ pub struct Irq {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, GetIrqStatus, Irq};
+/// use sx126x_spi_buffers::commands::{GetIrqStatus, Irq};
 /// let mut get_irq_status: GetIrqStatus = GetIrqStatus::new();
 /// assert_eq!(get_irq_status.tx_buf, [0x12, 0, 0, 0]);
 /// assert_eq!(get_irq_status.rx_buf, [0; 4]);
@@ -552,6 +519,8 @@ pub struct GetIrqStatus {
     pub rx_buf: [u8; 4],
 }
 impl GetIrqStatus {
+    const OPCODE: u8 = 0x12;
+
     #[inline(always)]
     pub const fn new() -> Self {
         Self {
@@ -559,22 +528,17 @@ impl GetIrqStatus {
             rx_buf: [0; 4],
         }
     }
-
     #[inline(always)]
-    pub const fn irq_status(&self) -> Irq {
-        Irq::from_bits((self.rx_buf[2] as u16) << 8 | (self.rx_buf[3] as u16))
-    }
-}
-impl const SpiCommand for GetIrqStatus {
-    const OPCODE: u8 = 0x12;
-
-    #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
             transfer_length: 4,
         }
+    }
+    #[inline(always)]
+    pub const fn irq_status(&self) -> Irq {
+        Irq::from_bits((self.rx_buf[2] as u16) << 8 | (self.rx_buf[3] as u16))
     }
 }
 
@@ -583,7 +547,7 @@ impl const SpiCommand for GetIrqStatus {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, ClearIrqStatus, Irq};
+/// use sx126x_spi_buffers::commands::{ClearIrqStatus, Irq};
 ///
 /// const CLEAR_IRQ_STATUS: ClearIrqStatus = ClearIrqStatus::new(Irq::new().with_header_valid(true)
 ///     .with_timeout(true));
@@ -596,6 +560,8 @@ pub struct ClearIrqStatus {
     pub rx_buf: [u8; 3],
 }
 impl ClearIrqStatus {
+    const OPCODE: u8 = 0x02;
+
     #[inline(always)]
     pub const fn new(clear_irq_param: Irq) -> Self {
         Self {
@@ -607,12 +573,8 @@ impl ClearIrqStatus {
             rx_buf: [0; 3],
         }
     }
-}
-impl const SpiCommand for ClearIrqStatus {
-    const OPCODE: u8 = 0x02;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -626,7 +588,7 @@ impl const SpiCommand for ClearIrqStatus {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetDio2AsRfSwitchCtrl};
+/// use sx126x_spi_buffers::commands::SetDio2AsRfSwitchCtrl;
 ///
 /// const SET_DIO2_AS_RF_SWITCH_CTRL: SetDio2AsRfSwitchCtrl = SetDio2AsRfSwitchCtrl::new(true);
 /// assert_eq!(SET_DIO2_AS_RF_SWITCH_CTRL.tx_buf, [0x9D, 1]);
@@ -638,6 +600,8 @@ pub struct SetDio2AsRfSwitchCtrl {
     pub rx_buf: [u8; 2],
 }
 impl SetDio2AsRfSwitchCtrl {
+    const OPCODE: u8 = 0x9D;
+
     #[inline(always)]
     pub const fn new(enable: bool) -> Self {
         Self {
@@ -645,12 +609,8 @@ impl SetDio2AsRfSwitchCtrl {
             rx_buf: [0; 2],
         }
     }
-}
-impl const SpiCommand for SetDio2AsRfSwitchCtrl {
-    const OPCODE: u8 = 0x9D;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -664,7 +624,7 @@ impl const SpiCommand for SetDio2AsRfSwitchCtrl {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetDio3AsTcxoCtrl, TcxoVoltage};
+/// use sx126x_spi_buffers::commands::{SetDio3AsTcxoCtrl, TcxoVoltage};
 ///
 /// const SET_DIO3_AS_TCXO_CTRL: SetDio3AsTcxoCtrl = SetDio3AsTcxoCtrl::new(TcxoVoltage::V3_3, 3500);
 /// assert_eq!(SET_DIO3_AS_TCXO_CTRL.tx_buf, [0x97, 7, 0, 13, 172]);
@@ -676,6 +636,8 @@ pub struct SetDio3AsTcxoCtrl {
     pub rx_buf: [u8; 5],
 }
 impl SetDio3AsTcxoCtrl {
+    const OPCODE: u8 = 0x97;
+
     #[inline(always)]
     pub const fn new(tcxo_voltage: TcxoVoltage, delay: u32) -> Self {
         Self {
@@ -689,12 +651,8 @@ impl SetDio3AsTcxoCtrl {
             rx_buf: [0; 5],
         }
     }
-}
-impl const SpiCommand for SetDio3AsTcxoCtrl {
-    const OPCODE: u8 = 0x97;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -719,7 +677,7 @@ pub enum TcxoVoltage {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetRfFrequency};
+/// use sx126x_spi_buffers::commands::SetRfFrequency;
 ///
 /// const SET_RF_FREQUENCY: SetRfFrequency = SetRfFrequency::new(455_081_984);
 /// assert_eq!(SET_RF_FREQUENCY.tx_buf, [0x86, 0x1B, 0x20, 0, 0]);
@@ -731,6 +689,8 @@ pub struct SetRfFrequency {
     pub rx_buf: [u8; 5],
 }
 impl SetRfFrequency {
+    const OPCODE: u8 = 0x86;
+
     #[inline(always)]
     pub const fn new(rf_freq: u32) -> Self {
         Self {
@@ -744,12 +704,8 @@ impl SetRfFrequency {
             rx_buf: [0; 5],
         }
     }
-}
-impl const SpiCommand for SetRfFrequency {
-    const OPCODE: u8 = 0x86;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -763,7 +719,7 @@ impl const SpiCommand for SetRfFrequency {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetPacketType, PacketType};
+/// use sx126x_spi_buffers::commands::{SetPacketType, PacketType};
 /// const SET_PACKET_TYPE: SetPacketType = SetPacketType::new(PacketType::Lora);
 /// assert_eq!(SET_PACKET_TYPE.tx_buf, [0x8A, 0x01]);
 /// assert_eq!(SET_PACKET_TYPE.rx_buf, [0; 2]);
@@ -774,6 +730,8 @@ pub struct SetPacketType {
     pub rx_buf: [u8; 2],
 }
 impl SetPacketType {
+    const OPCODE: u8 = 0x8A;
+
     #[inline(always)]
     pub const fn new(packet_type: PacketType) -> Self {
         Self {
@@ -781,12 +739,8 @@ impl SetPacketType {
             rx_buf: [0; 2],
         }
     }
-}
-impl const SpiCommand for SetPacketType {
-    const OPCODE: u8 = 0x8A;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -814,7 +768,7 @@ impl PacketType {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, GetPacketType, PacketType};
+/// use sx126x_spi_buffers::commands::{GetPacketType, PacketType};
 /// const GET_PACKET_TYPE: GetPacketType = GetPacketType::new();
 /// assert_eq!(GET_PACKET_TYPE.tx_buf, [0x11, 0, 0]);
 /// assert_eq!(GET_PACKET_TYPE.rx_buf, [0; 3]);
@@ -826,6 +780,8 @@ pub struct GetPacketType {
     pub rx_buf: [u8; 3],
 }
 impl GetPacketType {
+    const OPCODE: u8 = 0x11;
+
     #[inline(always)]
     pub const fn new() -> Self {
         Self {
@@ -834,20 +790,16 @@ impl GetPacketType {
         }
     }
     #[inline(always)]
-    pub const fn packet_type(&self) -> PacketType {
-        PacketType::from(self.rx_buf[2])
-    }
-}
-impl const SpiCommand for GetPacketType {
-    const OPCODE: u8 = 0x11;
-
-    #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
             transfer_length: 3,
         }
+    }
+    #[inline(always)]
+    pub const fn packet_type(&self) -> PacketType {
+        PacketType::from(self.rx_buf[2])
     }
 }
 
@@ -856,7 +808,7 @@ impl const SpiCommand for GetPacketType {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetTxParams, RampTime};
+/// use sx126x_spi_buffers::commands::{SetTxParams, RampTime};
 /// const SET_TX_PARAMS: SetTxParams = SetTxParams::new(22, RampTime::Ramp200U);
 /// assert_eq!(SET_TX_PARAMS.tx_buf, [0x8E, 22, 4]);
 /// assert_eq!(SET_TX_PARAMS.rx_buf, [0; 3]);
@@ -867,6 +819,8 @@ pub struct SetTxParams {
     pub rx_buf: [u8; 3],
 }
 impl SetTxParams {
+    const OPCODE: u8 = 0x8E;
+
     #[inline(always)]
     pub const fn new(power: u8, ramp_time: RampTime) -> Self {
         Self {
@@ -874,12 +828,8 @@ impl SetTxParams {
             rx_buf: [0; 3],
         }
     }
-}
-impl const SpiCommand for SetTxParams {
-    const OPCODE: u8 = 0x8E;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -911,7 +861,7 @@ impl RampTime {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetModulationParamsLora, Sf, Bw, Cr};
+/// use sx126x_spi_buffers::commands::{SetModulationParamsLora, Sf, Bw, Cr};
 /// const SET_MODULATION_PARAMS_LORA: SetModulationParamsLora = SetModulationParamsLora::new(
 ///    Sf::Sf10,
 ///    Bw::Bw125,
@@ -927,6 +877,8 @@ pub struct SetModulationParamsLora {
     pub rx_buf: [u8; 5],
 }
 impl SetModulationParamsLora {
+    const OPCODE: u8 = 0x8B;
+
     #[inline(always)]
     pub const fn new(sf: Sf, bw: Bw, cr: Cr, low_data_rate_optimize: bool) -> Self {
         Self {
@@ -940,12 +892,8 @@ impl SetModulationParamsLora {
             rx_buf: [0; 5],
         }
     }
-}
-impl const SpiCommand for SetModulationParamsLora {
-    const OPCODE: u8 = 0x8B;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -1025,7 +973,7 @@ impl Cr {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetPacketParams, HeaderType, InvertIq};
+/// use sx126x_spi_buffers::commands::{SetPacketParams, HeaderType, InvertIq};
 /// const SET_PACKET_PARAMS: SetPacketParams = SetPacketParams::new(
 ///    8,
 ///    HeaderType::VariableLength,
@@ -1042,6 +990,8 @@ pub struct SetPacketParams {
     pub rx_buf: [u8; 7],
 }
 impl SetPacketParams {
+    const OPCODE: u8 = 0x8C;
+
     #[inline(always)]
     pub const fn new(
         preamble_length: u16,
@@ -1063,12 +1013,8 @@ impl SetPacketParams {
             rx_buf: [0; 7],
         }
     }
-}
-impl const SpiCommand for SetPacketParams {
-    const OPCODE: u8 = 0x8C;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -1106,7 +1052,7 @@ impl InvertIq {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetBufferBaseAddress};
+/// use sx126x_spi_buffers::commands::SetBufferBaseAddress;
 /// const SET_BUFFER_BASE_ADDRESS: SetBufferBaseAddress = SetBufferBaseAddress::new(0x00, 0x80);
 /// assert_eq!(SET_BUFFER_BASE_ADDRESS.tx_buf, [0x8F, 0, 128]);
 /// assert_eq!(SET_BUFFER_BASE_ADDRESS.rx_buf, [0; 3]);
@@ -1117,6 +1063,8 @@ pub struct SetBufferBaseAddress {
     pub rx_buf: [u8; 3],
 }
 impl SetBufferBaseAddress {
+    const OPCODE: u8 = 0x8F;
+
     #[inline(always)]
     pub const fn new(tx_base_address: u8, rx_base_address: u8) -> Self {
         Self {
@@ -1124,12 +1072,8 @@ impl SetBufferBaseAddress {
             rx_buf: [0; 3],
         }
     }
-}
-impl const SpiCommand for SetBufferBaseAddress {
-    const OPCODE: u8 = 0x8F;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -1144,7 +1088,7 @@ impl const SpiCommand for SetBufferBaseAddress {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, SetLoraSymbNumTimeout};
+/// use sx126x_spi_buffers::commands::SetLoraSymbNumTimeout;
 /// const SET_LORA_SYMB_NUM_TIMEOUT: SetLoraSymbNumTimeout = SetLoraSymbNumTimeout::new(5);
 /// assert_eq!(SET_LORA_SYMB_NUM_TIMEOUT.tx_buf, [0xA0, 5]);
 /// assert_eq!(SET_LORA_SYMB_NUM_TIMEOUT.rx_buf, [0; 2]);
@@ -1155,6 +1099,8 @@ pub struct SetLoraSymbNumTimeout {
     pub rx_buf: [u8; 2],
 }
 impl SetLoraSymbNumTimeout {
+    const OPCODE: u8 = 0xA0;
+
     #[inline(always)]
     pub const fn new(symb_num: u8) -> Self {
         Self {
@@ -1162,12 +1108,8 @@ impl SetLoraSymbNumTimeout {
             rx_buf: [0; 2],
         }
     }
-}
-impl const SpiCommand for SetLoraSymbNumTimeout {
-    const OPCODE: u8 = 0xA0;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -1181,7 +1123,7 @@ impl const SpiCommand for SetLoraSymbNumTimeout {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, GetStatus, StatusChipMode, StatusCommandStatus};
+/// use sx126x_spi_buffers::commands::{GetStatus, StatusChipMode, StatusCommandStatus};
 /// let mut get_status: GetStatus = GetStatus::new();
 /// assert_eq!(get_status.tx_buf, [0xC0, 0]);
 /// assert_eq!(get_status.rx_buf, [0; 2]);
@@ -1195,11 +1137,21 @@ pub struct GetStatus {
     pub rx_buf: [u8; 2],
 }
 impl GetStatus {
+    const OPCODE: u8 = 0xC0;
+
     #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0],
             rx_buf: [0; 2],
+        }
+    }
+    #[inline(always)]
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 2,
         }
     }
     #[inline(always)]
@@ -1209,18 +1161,6 @@ impl GetStatus {
     #[inline(always)]
     pub const fn command_status(&self) -> StatusCommandStatus {
         StatusCommandStatus::extract(self.rx_buf[1])
-    }
-}
-impl const SpiCommand for GetStatus {
-    const OPCODE: u8 = 0xC0;
-
-    #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
-        SpiDescriptor {
-            tx_buf_ptr: self.tx_buf.as_ptr(),
-            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
-            transfer_length: 2,
-        }
     }
 }
 #[repr(u8)]
@@ -1266,7 +1206,7 @@ impl StatusCommandStatus {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, GetRxBufferStatus};
+/// use sx126x_spi_buffers::commands::GetRxBufferStatus;
 /// let mut get_rx_buffer_status: GetRxBufferStatus = GetRxBufferStatus::new();
 /// assert_eq!(get_rx_buffer_status.tx_buf, [0x13, 0, 0, 0]);
 /// assert_eq!(get_rx_buffer_status.rx_buf, [0; 4]);
@@ -1281,11 +1221,21 @@ pub struct GetRxBufferStatus {
     pub rx_buf: [u8; 4],
 }
 impl GetRxBufferStatus {
+    const OPCODE: u8 = 0x13;
+
     #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0, 0, 0],
             rx_buf: [0; 4],
+        }
+    }
+    #[inline(always)]
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 4,
         }
     }
     #[inline(always)]
@@ -1297,25 +1247,13 @@ impl GetRxBufferStatus {
         self.rx_buf[3]
     }
 }
-impl const SpiCommand for GetRxBufferStatus {
-    const OPCODE: u8 = 0x13;
-
-    #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
-        SpiDescriptor {
-            tx_buf_ptr: self.tx_buf.as_ptr(),
-            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
-            transfer_length: 4,
-        }
-    }
-}
 
 /// # GetPacketStatusLora command
 /// Gets the signal quality of the last received LoRa packets.
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, GetPacketStatusLora};
+/// use sx126x_spi_buffers::commands::GetPacketStatusLora;
 ///
 /// let mut get_packet_status_lora: GetPacketStatusLora = GetPacketStatusLora::new();
 /// assert_eq!(get_packet_status_lora.tx_buf, [0x14, 0, 0, 0, 0]);
@@ -1334,11 +1272,21 @@ pub struct GetPacketStatusLora {
 }
 
 impl GetPacketStatusLora {
+    const OPCODE: u8 = 0x14;
+
     #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0, 0, 0, 0],
             rx_buf: [0; 5],
+        }
+    }
+    #[inline(always)]
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 5,
         }
     }
     #[inline(always)]
@@ -1354,25 +1302,13 @@ impl GetPacketStatusLora {
         -((self.rx_buf[4] / 2) as i8)
     }
 }
-impl const SpiCommand for GetPacketStatusLora {
-    const OPCODE: u8 = 0x14;
-
-    #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
-        SpiDescriptor {
-            tx_buf_ptr: self.tx_buf.as_ptr(),
-            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
-            transfer_length: 5,
-        }
-    }
-}
 
 /// # GetStatsLora command
 /// Returns the number of received packets, CRC errors, and header errors for LoRa packets.
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, GetStatsLora};
+/// use sx126x_spi_buffers::commands::GetStatsLora;
 ///
 /// let mut get_stats_lora: GetStatsLora = GetStatsLora::new();
 /// assert_eq!(get_stats_lora.tx_buf, [0x10, 0, 0, 0, 0, 0, 0, 0]);
@@ -1393,11 +1329,21 @@ pub struct GetStatsLora {
     pub rx_buf: [u8; 8],
 }
 impl GetStatsLora {
+    const OPCODE: u8 = 0x10;
+
     #[inline(always)]
     pub const fn new() -> Self {
         Self {
             tx_buf: [Self::OPCODE, 0, 0, 0, 0, 0, 0, 0],
             rx_buf: [0; 8],
+        }
+    }
+    #[inline(always)]
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 8,
         }
     }
     #[inline(always)]
@@ -1413,25 +1359,13 @@ impl GetStatsLora {
         (self.rx_buf[6] as u16) << 8 | (self.rx_buf[7]) as u16
     }
 }
-impl const SpiCommand for GetStatsLora {
-    const OPCODE: u8 = 0x10;
-
-    #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
-        SpiDescriptor {
-            tx_buf_ptr: self.tx_buf.as_ptr(),
-            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
-            transfer_length: 8,
-        }
-    }
-}
 
 /// # ResetStats command
 /// Resets the number of packets received counters.
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, ResetStats};
+/// use sx126x_spi_buffers::commands::ResetStats;
 ///
 /// const RESET_STATS: ResetStats = ResetStats::new();
 /// assert_eq!(RESET_STATS.tx_buf, [0x00, 0, 0, 0, 0, 0, 0]);
@@ -1443,6 +1377,8 @@ pub struct ResetStats {
     pub rx_buf: [u8; 7],
 }
 impl ResetStats {
+    const OPCODE: u8 = 0x00;
+
     #[inline(always)]
     pub const fn new() -> Self {
         Self {
@@ -1450,12 +1386,8 @@ impl ResetStats {
             rx_buf: [0; 7],
         }
     }
-}
-impl const SpiCommand for ResetStats {
-    const OPCODE: u8 = 0x00;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
@@ -1469,7 +1401,7 @@ impl const SpiCommand for ResetStats {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, GetDeviceErrors, OpError};
+/// use sx126x_spi_buffers::commands::{GetDeviceErrors, OpError};
 ///
 /// let mut get_device_errors: GetDeviceErrors = GetDeviceErrors::new();
 /// assert_eq!(get_device_errors.tx_buf, [0x17, 0, 0, 0]);
@@ -1484,6 +1416,8 @@ pub struct GetDeviceErrors {
     pub rx_buf: [u8; 4],
 }
 impl GetDeviceErrors {
+    const OPCODE: u8 = 0x17;
+
     #[inline(always)]
     pub const fn new() -> Self {
         Self {
@@ -1492,20 +1426,16 @@ impl GetDeviceErrors {
         }
     }
     #[inline(always)]
-    pub const fn op_error(&self) -> OpError {
-        OpError::from_bits((self.rx_buf[2] as u16) << 8 | self.rx_buf[3] as u16)
-    }
-}
-impl const SpiCommand for GetDeviceErrors {
-    const OPCODE: u8 = 0x17;
-
-    #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),
             transfer_length: 4,
         }
+    }
+    #[inline(always)]
+    pub const fn op_error(&self) -> OpError {
+        OpError::from_bits((self.rx_buf[2] as u16) << 8 | self.rx_buf[3] as u16)
     }
 }
 #[bitfield(u16)]
@@ -1538,7 +1468,7 @@ pub struct OpError {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{SpiCommand, ClearDeviceErrors};
+/// use sx126x_spi_buffers::commands::ClearDeviceErrors;
 ///
 /// const CLEAR_DEVICE_ERRORS: ClearDeviceErrors = ClearDeviceErrors::new();
 /// assert_eq!(CLEAR_DEVICE_ERRORS.tx_buf, [0x07, 0, 0]);
@@ -1550,6 +1480,8 @@ pub struct ClearDeviceErrors {
     pub rx_buf: [u8; 3],
 }
 impl ClearDeviceErrors {
+    const OPCODE: u8 = 0x07;
+
     #[inline(always)]
     pub const fn new() -> Self {
         Self {
@@ -1557,12 +1489,8 @@ impl ClearDeviceErrors {
             rx_buf: [0; 3],
         }
     }
-}
-impl const SpiCommand for ClearDeviceErrors {
-    const OPCODE: u8 = 0x07;
-
     #[inline(always)]
-    fn descriptor(&mut self) -> SpiDescriptor {
+    pub const fn descriptor(&mut self) -> SpiDescriptor {
         SpiDescriptor {
             tx_buf_ptr: self.tx_buf.as_ptr(),
             rx_buf_ptr: self.rx_buf.as_mut_ptr(),

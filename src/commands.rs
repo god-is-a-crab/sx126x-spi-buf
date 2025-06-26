@@ -6,11 +6,28 @@ use bitfield_struct::bitfield;
 use core::marker::PhantomData;
 
 #[const_trait]
-pub trait Command<const N: usize> {
+pub trait SpiCommand {
     const OPCODE: u8;
-    fn tx_buf(&self) -> &[u8; N];
-    fn rx_buf(&self) -> &[u8; N];
-    fn transfer_size(&self) -> u16;
+    fn tx_buf_ptr(&self) -> *const u8;
+    fn rx_buf_ptr(&mut self) -> *mut u8;
+    fn transfer_length(&self) -> u16;
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct SpiDescriptor {
+    pub tx_buf_ptr: *const u8,
+    pub rx_buf_ptr: *mut u8,
+    pub transfer_length: u16,
+}
+impl SpiDescriptor {
+    #[inline]
+    pub fn new<T: SpiCommand>(command: &mut T) -> Self {
+        Self {
+            tx_buf_ptr: command.tx_buf_ptr(),
+            rx_buf_ptr: command.rx_buf_ptr(),
+            transfer_length: command.transfer_length(),
+        }
+    }
 }
 
 /// # SetSleep command
@@ -18,12 +35,12 @@ pub trait Command<const N: usize> {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetSleep, SleepConfig};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetSleep, SleepConfig};
 ///
 /// const SET_SLEEP: SetSleep = SetSleep::new(SleepConfig::new().with_warm_start(true));
 /// assert_eq!(SET_SLEEP.tx_buf, [0x84, 0x04]);
 /// assert_eq!(SET_SLEEP.rx_buf, [0, 0]);
-/// assert_eq!(SET_SLEEP.transfer_size(), 2);
+/// assert_eq!(SET_SLEEP.transfer_length(), 2);
 /// ``````
 pub struct SetSleep {
     pub tx_buf: [u8; 2],
@@ -37,16 +54,16 @@ impl SetSleep {
         }
     }
 }
-impl const Command<2> for SetSleep {
+impl const SpiCommand for SetSleep {
     const OPCODE: u8 = 0x84;
 
-    fn tx_buf(&self) -> &[u8; 2] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 2] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         2
     }
 }
@@ -66,12 +83,12 @@ pub struct SleepConfig {
 /// Sets the device to standby mode.
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetStandby, StdbyConfig};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetStandby, StdbyConfig};
 ///
 /// const SET_STANDBY: SetStandby = SetStandby::new(StdbyConfig::StdbyXosc);
 /// assert_eq!(SET_STANDBY.tx_buf, [0x80, 1]);
 /// assert_eq!(SET_STANDBY.rx_buf, [0, 0]);
-/// assert_eq!(SET_STANDBY.transfer_size(), 2);
+/// assert_eq!(SET_STANDBY.transfer_length(), 2);
 /// ```
 pub struct SetStandby {
     pub tx_buf: [u8; 2],
@@ -85,16 +102,16 @@ impl SetStandby {
         }
     }
 }
-impl const Command<2> for SetStandby {
+impl const SpiCommand for SetStandby {
     const OPCODE: u8 = 0x80;
 
-    fn tx_buf(&self) -> &[u8; 2] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 2] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         2
     }
 }
@@ -109,12 +126,12 @@ pub enum StdbyConfig {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetTx};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetTx};
 ///
 /// const SET_TX: SetTx = SetTx::new(6862921);
 /// assert_eq!(SET_TX.tx_buf, [0x83, 104, 184, 73]);
 /// assert_eq!(SET_TX.rx_buf, [0; 4]);
-/// assert_eq!(SET_TX.transfer_size(), 4);
+/// assert_eq!(SET_TX.transfer_length(), 4);
 /// ```
 pub struct SetTx {
     pub tx_buf: [u8; 4],
@@ -133,16 +150,16 @@ impl SetTx {
         }
     }
 }
-impl const Command<4> for SetTx {
+impl const SpiCommand for SetTx {
     const OPCODE: u8 = 0x83;
 
-    fn tx_buf(&self) -> &[u8; 4] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 4] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         4
     }
 }
@@ -152,12 +169,12 @@ impl const Command<4> for SetTx {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetRx};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetRx};
 ///
 /// const SET_RX: SetRx = SetRx::new(120);
 /// assert_eq!(SET_RX.tx_buf, [0x82, 0, 0, 120]);
 /// assert_eq!(SET_RX.rx_buf, [0; 4]);
-/// assert_eq!(SET_RX.transfer_size(), 4);
+/// assert_eq!(SET_RX.transfer_length(), 4);
 /// ```
 pub struct SetRx {
     pub tx_buf: [u8; 4],
@@ -176,16 +193,16 @@ impl SetRx {
         }
     }
 }
-impl const Command<4> for SetRx {
+impl const SpiCommand for SetRx {
     const OPCODE: u8 = 0x82;
 
-    fn tx_buf(&self) -> &[u8; 4] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 4] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         4
     }
 }
@@ -195,12 +212,12 @@ impl const Command<4> for SetRx {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetPaConfig};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetPaConfig};
 ///
 /// const SET_PA_CONFIG: SetPaConfig = SetPaConfig::new(0x04, 0x07);
 /// assert_eq!(SET_PA_CONFIG.tx_buf, [0x95, 0x04, 0x07, 0x00, 0x01]);
 /// assert_eq!(SET_PA_CONFIG.rx_buf, [0; 5]);
-/// assert_eq!(SET_PA_CONFIG.transfer_size(), 5);
+/// assert_eq!(SET_PA_CONFIG.transfer_length(), 5);
 /// ```
 pub struct SetPaConfig {
     pub tx_buf: [u8; 5],
@@ -214,16 +231,16 @@ impl SetPaConfig {
         }
     }
 }
-impl const Command<5> for SetPaConfig {
+impl const SpiCommand for SetPaConfig {
     const OPCODE: u8 = 0x95;
 
-    fn tx_buf(&self) -> &[u8; 5] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 5] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         5
     }
 }
@@ -233,12 +250,12 @@ impl const Command<5> for SetPaConfig {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::{registers, commands::{Command, WriteRegister}};
+/// use sx126x_spi_buffers::{registers, commands::{SpiCommand, WriteRegister}};
 ///
 /// const WRITE_REGISTER: WriteRegister = WriteRegister::new(registers::LoraSyncWordMsb(0x48));
 /// assert_eq!(WRITE_REGISTER.tx_buf, [0x0D, 0x07, 0x40, 0x48]);
 /// assert_eq!(WRITE_REGISTER.rx_buf, [0; 4]);
-/// assert_eq!(WRITE_REGISTER.transfer_size(), 4);
+/// assert_eq!(WRITE_REGISTER.transfer_length(), 4);
 /// ```
 pub struct WriteRegister {
     pub tx_buf: [u8; 4],
@@ -257,16 +274,16 @@ impl WriteRegister {
         }
     }
 }
-impl const Command<4> for WriteRegister {
+impl const SpiCommand for WriteRegister {
     const OPCODE: u8 = 0x0D;
 
-    fn tx_buf(&self) -> &[u8; 4] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 4] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         4
     }
 }
@@ -276,12 +293,12 @@ impl const Command<4> for WriteRegister {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::{registers, commands::{Command, ReadRegister}};
+/// use sx126x_spi_buffers::{registers, commands::{SpiCommand, ReadRegister}};
 ///
 /// let mut read_register: ReadRegister<registers::LoraSyncWordLsb> = ReadRegister::new();
 /// assert_eq!(read_register.tx_buf, [0x1D, 0x07, 0x41, 0, 0]);
 /// assert_eq!(read_register.rx_buf, [0; 5]);
-/// assert_eq!(read_register.transfer_size(), 5);
+/// assert_eq!(read_register.transfer_length(), 5);
 /// read_register.rx_buf[4] = 0x86;
 /// assert_eq!(read_register.register(), registers::LoraSyncWordLsb(0x86));
 /// ```
@@ -308,19 +325,19 @@ impl<R: const Register> ReadRegister<R> {
         R::from_bits(self.rx_buf[4])
     }
 }
-impl<R> const Command<5> for ReadRegister<R>
+impl<R> const SpiCommand for ReadRegister<R>
 where
     R: const Register,
 {
     const OPCODE: u8 = 0x1D;
 
-    fn tx_buf(&self) -> &[u8; 5] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 5] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         5
     }
 }
@@ -334,14 +351,14 @@ where
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, WriteBuffer};
+/// use sx126x_spi_buffers::commands::{SpiCommand, WriteBuffer};
 ///
 /// let mut write_buffer: WriteBuffer<7> = WriteBuffer::new(0x10, [b'h', b'e', b'l', b'l', b'o'].into());
 /// assert_eq!(write_buffer.tx_buf, [0x0E, 0x10, b'h', b'e', b'l', b'l', b'o']);
 /// assert_eq!(write_buffer.rx_buf, [0; 7]);
-/// assert_eq!(write_buffer.transfer_size(), 7);
+/// assert_eq!(write_buffer.transfer_length(), 7);
 /// write_buffer.set_data_length(3);
-/// assert_eq!(write_buffer.transfer_size(), 5);
+/// assert_eq!(write_buffer.transfer_length(), 5);
 /// ```
 pub struct WriteBuffer<const N: usize> {
     pub tx_buf: [u8; N],
@@ -368,16 +385,16 @@ impl<const N: usize> WriteBuffer<N> {
         self.data_length = data_length;
     }
 }
-impl<const N: usize> const Command<N> for WriteBuffer<N> {
+impl<const N: usize> const SpiCommand for WriteBuffer<N> {
     const OPCODE: u8 = 0x0E;
 
-    fn tx_buf(&self) -> &[u8; N] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; N] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         self.data_length + 2
     }
 }
@@ -390,16 +407,16 @@ impl<const N: usize> const Command<N> for WriteBuffer<N> {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, ReadBuffer};
+/// use sx126x_spi_buffers::commands::{SpiCommand, ReadBuffer};
 ///
 /// let mut read_buffer: ReadBuffer<8> = ReadBuffer::new(0x17);
 /// assert_eq!(read_buffer.tx_buf, [0x1E, 0x17, 0, 0, 0, 0, 0, 0]);
 /// assert_eq!(read_buffer.rx_buf, [0; 8]);
-/// assert_eq!(read_buffer.transfer_size(), 8);
+/// assert_eq!(read_buffer.transfer_length(), 8);
 /// read_buffer.rx_buf[3..8].copy_from_slice(&[b'h', b'e', b'l', b'l', b'o']);
 /// assert_eq!(read_buffer.data(), &[b'h', b'e', b'l', b'l', b'o']);
 /// read_buffer.set_data_length(3);
-/// assert_eq!(read_buffer.transfer_size(), 6);
+/// assert_eq!(read_buffer.transfer_length(), 6);
 /// assert_eq!(read_buffer.data(), &[b'h', b'e', b'l']);
 /// ```
 pub struct ReadBuffer<const N: usize> {
@@ -425,16 +442,16 @@ impl<const N: usize> ReadBuffer<N> {
         &self.rx_buf[3..3 + self.data_length as usize]
     }
 }
-impl<const N: usize> const Command<N> for ReadBuffer<N> {
+impl<const N: usize> const SpiCommand for ReadBuffer<N> {
     const OPCODE: u8 = 0x1E;
 
-    fn tx_buf(&self) -> &[u8; N] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; N] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         self.data_length + 3
     }
 }
@@ -444,7 +461,7 @@ impl<const N: usize> const Command<N> for ReadBuffer<N> {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetDioIrqParams, Irq};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetDioIrqParams, Irq};
 /// const SET_DIO_IRQ_PARAMS: SetDioIrqParams = SetDioIrqParams::new(
 ///     Irq::new().with_tx_done(true),
 ///     Irq::new().with_rx_done(true),
@@ -453,7 +470,7 @@ impl<const N: usize> const Command<N> for ReadBuffer<N> {
 /// );
 /// assert_eq!(SET_DIO_IRQ_PARAMS.tx_buf, [0x08, 0, 1, 0, 2, 2, 0, 0, 0]);
 /// assert_eq!(SET_DIO_IRQ_PARAMS.rx_buf, [0; 9]);
-/// assert_eq!(SET_DIO_IRQ_PARAMS.transfer_size(), 9);
+/// assert_eq!(SET_DIO_IRQ_PARAMS.transfer_length(), 9);
 /// ```
 pub struct SetDioIrqParams {
     pub tx_buf: [u8; 9],
@@ -479,16 +496,16 @@ impl SetDioIrqParams {
         }
     }
 }
-impl const Command<9> for SetDioIrqParams {
+impl const SpiCommand for SetDioIrqParams {
     const OPCODE: u8 = 0x08;
 
-    fn tx_buf(&self) -> &[u8; 9] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 9] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         9
     }
 }
@@ -528,7 +545,7 @@ pub struct Irq {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, GetIrqStatus, Irq};
+/// use sx126x_spi_buffers::commands::{SpiCommand, GetIrqStatus, Irq};
 /// let mut get_irq_status: GetIrqStatus = GetIrqStatus::new();
 /// assert_eq!(get_irq_status.tx_buf, [0x12, 0, 0, 0]);
 /// assert_eq!(get_irq_status.rx_buf, [0; 4]);
@@ -551,16 +568,16 @@ impl GetIrqStatus {
         Irq::from_bits((self.rx_buf[2] as u16) << 8 | (self.rx_buf[3] as u16))
     }
 }
-impl const Command<4> for GetIrqStatus {
+impl const SpiCommand for GetIrqStatus {
     const OPCODE: u8 = 0x12;
 
-    fn tx_buf(&self) -> &[u8; 4] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 4] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         4
     }
 }
@@ -570,13 +587,13 @@ impl const Command<4> for GetIrqStatus {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, ClearIrqStatus, Irq};
+/// use sx126x_spi_buffers::commands::{SpiCommand, ClearIrqStatus, Irq};
 ///
 /// const CLEAR_IRQ_STATUS: ClearIrqStatus = ClearIrqStatus::new(Irq::new().with_header_valid(true)
 ///     .with_timeout(true));
 /// assert_eq!(CLEAR_IRQ_STATUS.tx_buf, [0x02, 2, 16]);
 /// assert_eq!(CLEAR_IRQ_STATUS.rx_buf, [0; 3]);
-/// assert_eq!(CLEAR_IRQ_STATUS.transfer_size(), 3);
+/// assert_eq!(CLEAR_IRQ_STATUS.transfer_length(), 3);
 /// ```
 pub struct ClearIrqStatus {
     pub tx_buf: [u8; 3],
@@ -594,16 +611,16 @@ impl ClearIrqStatus {
         }
     }
 }
-impl const Command<3> for ClearIrqStatus {
+impl const SpiCommand for ClearIrqStatus {
     const OPCODE: u8 = 0x02;
 
-    fn tx_buf(&self) -> &[u8; 3] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 3] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         3
     }
 }
@@ -613,12 +630,12 @@ impl const Command<3> for ClearIrqStatus {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetDio2AsRfSwitchCtrl};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetDio2AsRfSwitchCtrl};
 ///
 /// const SET_DIO2_AS_RF_SWITCH_CTRL: SetDio2AsRfSwitchCtrl = SetDio2AsRfSwitchCtrl::new(true);
 /// assert_eq!(SET_DIO2_AS_RF_SWITCH_CTRL.tx_buf, [0x9D, 1]);
 /// assert_eq!(SET_DIO2_AS_RF_SWITCH_CTRL.rx_buf, [0; 2]);
-/// assert_eq!(SET_DIO2_AS_RF_SWITCH_CTRL.transfer_size(), 2);
+/// assert_eq!(SET_DIO2_AS_RF_SWITCH_CTRL.transfer_length(), 2);
 /// ```
 pub struct SetDio2AsRfSwitchCtrl {
     pub tx_buf: [u8; 2],
@@ -632,16 +649,16 @@ impl SetDio2AsRfSwitchCtrl {
         }
     }
 }
-impl const Command<2> for SetDio2AsRfSwitchCtrl {
+impl const SpiCommand for SetDio2AsRfSwitchCtrl {
     const OPCODE: u8 = 0x9D;
 
-    fn tx_buf(&self) -> &[u8; 2] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 2] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         2
     }
 }
@@ -651,12 +668,12 @@ impl const Command<2> for SetDio2AsRfSwitchCtrl {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetDio3AsTcxoCtrl, TcxoVoltage};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetDio3AsTcxoCtrl, TcxoVoltage};
 ///
 /// const SET_DIO3_AS_TCXO_CTRL: SetDio3AsTcxoCtrl = SetDio3AsTcxoCtrl::new(TcxoVoltage::V3_3, 3500);
 /// assert_eq!(SET_DIO3_AS_TCXO_CTRL.tx_buf, [0x97, 7, 0, 13, 172]);
 /// assert_eq!(SET_DIO3_AS_TCXO_CTRL.rx_buf, [0; 5]);
-/// assert_eq!(SET_DIO3_AS_TCXO_CTRL.transfer_size(), 5);
+/// assert_eq!(SET_DIO3_AS_TCXO_CTRL.transfer_length(), 5);
 /// ```
 pub struct SetDio3AsTcxoCtrl {
     pub tx_buf: [u8; 5],
@@ -676,16 +693,16 @@ impl SetDio3AsTcxoCtrl {
         }
     }
 }
-impl const Command<5> for SetDio3AsTcxoCtrl {
+impl const SpiCommand for SetDio3AsTcxoCtrl {
     const OPCODE: u8 = 0x97;
 
-    fn tx_buf(&self) -> &[u8; 5] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 5] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         5
     }
 }
@@ -706,12 +723,12 @@ pub enum TcxoVoltage {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetRfFrequency};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetRfFrequency};
 ///
 /// const SET_RF_FREQUENCY: SetRfFrequency = SetRfFrequency::new(455_081_984);
 /// assert_eq!(SET_RF_FREQUENCY.tx_buf, [0x86, 0x1B, 0x20, 0, 0]);
 /// assert_eq!(SET_RF_FREQUENCY.rx_buf, [0; 5]);
-/// assert_eq!(SET_RF_FREQUENCY.transfer_size(), 5);
+/// assert_eq!(SET_RF_FREQUENCY.transfer_length(), 5);
 /// ```
 pub struct SetRfFrequency {
     pub tx_buf: [u8; 5],
@@ -731,16 +748,16 @@ impl SetRfFrequency {
         }
     }
 }
-impl const Command<5> for SetRfFrequency {
+impl const SpiCommand for SetRfFrequency {
     const OPCODE: u8 = 0x86;
 
-    fn tx_buf(&self) -> &[u8; 5] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 5] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         5
     }
 }
@@ -750,11 +767,11 @@ impl const Command<5> for SetRfFrequency {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetPacketType, PacketType};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetPacketType, PacketType};
 /// const SET_PACKET_TYPE: SetPacketType = SetPacketType::new(PacketType::Lora);
 /// assert_eq!(SET_PACKET_TYPE.tx_buf, [0x8A, 0x01]);
 /// assert_eq!(SET_PACKET_TYPE.rx_buf, [0; 2]);
-/// assert_eq!(SET_PACKET_TYPE.transfer_size(), 2);
+/// assert_eq!(SET_PACKET_TYPE.transfer_length(), 2);
 /// ```
 pub struct SetPacketType {
     pub tx_buf: [u8; 2],
@@ -768,16 +785,16 @@ impl SetPacketType {
         }
     }
 }
-impl const Command<2> for SetPacketType {
+impl const SpiCommand for SetPacketType {
     const OPCODE: u8 = 0x8A;
 
-    fn tx_buf(&self) -> &[u8; 2] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 2] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         2
     }
 }
@@ -800,11 +817,11 @@ impl PacketType {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, GetPacketType, PacketType};
+/// use sx126x_spi_buffers::commands::{SpiCommand, GetPacketType, PacketType};
 /// const GET_PACKET_TYPE: GetPacketType = GetPacketType::new();
 /// assert_eq!(GET_PACKET_TYPE.tx_buf, [0x11, 0, 0]);
 /// assert_eq!(GET_PACKET_TYPE.rx_buf, [0; 3]);
-/// assert_eq!(GET_PACKET_TYPE.transfer_size(), 3);
+/// assert_eq!(GET_PACKET_TYPE.transfer_length(), 3);
 /// assert_eq!(GET_PACKET_TYPE.packet_type(), PacketType::Gfsk);
 /// ```
 pub struct GetPacketType {
@@ -822,16 +839,16 @@ impl GetPacketType {
         PacketType::from(self.rx_buf[2])
     }
 }
-impl const Command<3> for GetPacketType {
+impl const SpiCommand for GetPacketType {
     const OPCODE: u8 = 0x11;
 
-    fn tx_buf(&self) -> &[u8; 3] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 3] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         3
     }
 }
@@ -841,11 +858,11 @@ impl const Command<3> for GetPacketType {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetTxParams, RampTime};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetTxParams, RampTime};
 /// const SET_TX_PARAMS: SetTxParams = SetTxParams::new(22, RampTime::Ramp200U);
 /// assert_eq!(SET_TX_PARAMS.tx_buf, [0x8E, 22, 4]);
 /// assert_eq!(SET_TX_PARAMS.rx_buf, [0; 3]);
-/// assert_eq!(SET_TX_PARAMS.transfer_size(), 3);
+/// assert_eq!(SET_TX_PARAMS.transfer_length(), 3);
 /// ```
 pub struct SetTxParams {
     pub tx_buf: [u8; 3],
@@ -859,16 +876,16 @@ impl SetTxParams {
         }
     }
 }
-impl const Command<3> for SetTxParams {
+impl const SpiCommand for SetTxParams {
     const OPCODE: u8 = 0x8E;
 
-    fn tx_buf(&self) -> &[u8; 3] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 3] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         3
     }
 }
@@ -895,7 +912,7 @@ impl RampTime {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetModulationParamsLora, Sf, Bw, Cr};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetModulationParamsLora, Sf, Bw, Cr};
 /// const SET_MODULATION_PARAMS_LORA: SetModulationParamsLora = SetModulationParamsLora::new(
 ///    Sf::Sf10,
 ///    Bw::Bw125,
@@ -904,7 +921,7 @@ impl RampTime {
 /// );
 /// assert_eq!(SET_MODULATION_PARAMS_LORA.tx_buf, [0x8B, 0x0A, 0x04, 0x01, 0]);
 /// assert_eq!(SET_MODULATION_PARAMS_LORA.rx_buf, [0; 5]);
-/// assert_eq!(SET_MODULATION_PARAMS_LORA.transfer_size(), 5);
+/// assert_eq!(SET_MODULATION_PARAMS_LORA.transfer_length(), 5);
 /// ```
 pub struct SetModulationParamsLora {
     pub tx_buf: [u8; 5],
@@ -924,16 +941,16 @@ impl SetModulationParamsLora {
         }
     }
 }
-impl const Command<5> for SetModulationParamsLora {
+impl const SpiCommand for SetModulationParamsLora {
     const OPCODE: u8 = 0x8B;
 
-    fn tx_buf(&self) -> &[u8; 5] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 5] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         5
     }
 }
@@ -1006,7 +1023,7 @@ impl Cr {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetPacketParams, HeaderType, InvertIq};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetPacketParams, HeaderType, InvertIq};
 /// const SET_PACKET_PARAMS: SetPacketParams = SetPacketParams::new(
 ///    8,
 ///    HeaderType::VariableLength,
@@ -1016,7 +1033,7 @@ impl Cr {
 /// );
 /// assert_eq!(SET_PACKET_PARAMS.tx_buf, [0x8C, 0, 8, 0, 14, 0, 0]);
 /// assert_eq!(SET_PACKET_PARAMS.rx_buf, [0; 7]);
-/// assert_eq!(SET_PACKET_PARAMS.transfer_size(), 7);
+/// assert_eq!(SET_PACKET_PARAMS.transfer_length(), 7);
 /// ```
 pub struct SetPacketParams {
     pub tx_buf: [u8; 7],
@@ -1044,16 +1061,16 @@ impl SetPacketParams {
         }
     }
 }
-impl const Command<7> for SetPacketParams {
+impl const SpiCommand for SetPacketParams {
     const OPCODE: u8 = 0x8C;
 
-    fn tx_buf(&self) -> &[u8; 7] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 7] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         7
     }
 }
@@ -1085,11 +1102,11 @@ impl InvertIq {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetBufferBaseAddress};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetBufferBaseAddress};
 /// const SET_BUFFER_BASE_ADDRESS: SetBufferBaseAddress = SetBufferBaseAddress::new(0x00, 0x80);
 /// assert_eq!(SET_BUFFER_BASE_ADDRESS.tx_buf, [0x8F, 0, 128]);
 /// assert_eq!(SET_BUFFER_BASE_ADDRESS.rx_buf, [0; 3]);
-/// assert_eq!(SET_BUFFER_BASE_ADDRESS.transfer_size(), 3);
+/// assert_eq!(SET_BUFFER_BASE_ADDRESS.transfer_length(), 3);
 /// ```
 pub struct SetBufferBaseAddress {
     pub tx_buf: [u8; 3],
@@ -1103,16 +1120,16 @@ impl SetBufferBaseAddress {
         }
     }
 }
-impl const Command<3> for SetBufferBaseAddress {
+impl const SpiCommand for SetBufferBaseAddress {
     const OPCODE: u8 = 0x8F;
 
-    fn tx_buf(&self) -> &[u8; 3] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 3] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         3
     }
 }
@@ -1123,11 +1140,11 @@ impl const Command<3> for SetBufferBaseAddress {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, SetLoraSymbNumTimeout};
+/// use sx126x_spi_buffers::commands::{SpiCommand, SetLoraSymbNumTimeout};
 /// const SET_LORA_SYMB_NUM_TIMEOUT: SetLoraSymbNumTimeout = SetLoraSymbNumTimeout::new(5);
 /// assert_eq!(SET_LORA_SYMB_NUM_TIMEOUT.tx_buf, [0xA0, 5]);
 /// assert_eq!(SET_LORA_SYMB_NUM_TIMEOUT.rx_buf, [0; 2]);
-/// assert_eq!(SET_LORA_SYMB_NUM_TIMEOUT.transfer_size(), 2);
+/// assert_eq!(SET_LORA_SYMB_NUM_TIMEOUT.transfer_length(), 2);
 /// ```
 pub struct SetLoraSymbNumTimeout {
     pub tx_buf: [u8; 2],
@@ -1141,16 +1158,16 @@ impl SetLoraSymbNumTimeout {
         }
     }
 }
-impl const Command<2> for SetLoraSymbNumTimeout {
+impl const SpiCommand for SetLoraSymbNumTimeout {
     const OPCODE: u8 = 0xA0;
 
-    fn tx_buf(&self) -> &[u8; 2] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 2] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         2
     }
 }
@@ -1160,11 +1177,11 @@ impl const Command<2> for SetLoraSymbNumTimeout {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, GetStatus, StatusChipMode, StatusCommandStatus};
+/// use sx126x_spi_buffers::commands::{SpiCommand, GetStatus, StatusChipMode, StatusCommandStatus};
 /// let mut get_status: GetStatus = GetStatus::new();
 /// assert_eq!(get_status.tx_buf, [0xC0, 0]);
 /// assert_eq!(get_status.rx_buf, [0; 2]);
-/// assert_eq!(get_status.transfer_size(), 2);
+/// assert_eq!(get_status.transfer_length(), 2);
 /// get_status.rx_buf[1] = 0x64;
 /// assert_eq!(get_status.chip_mode(), StatusChipMode::Tx);
 /// assert_eq!(get_status.command_status(), StatusCommandStatus::DataIsAvailableToHost);
@@ -1189,16 +1206,16 @@ impl GetStatus {
         StatusCommandStatus::extract(self.rx_buf[1])
     }
 }
-impl const Command<2> for GetStatus {
+impl const SpiCommand for GetStatus {
     const OPCODE: u8 = 0xC0;
 
-    fn tx_buf(&self) -> &[u8; 2] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 2] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         2
     }
 }
@@ -1243,11 +1260,11 @@ impl StatusCommandStatus {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, GetRxBufferStatus};
+/// use sx126x_spi_buffers::commands::{SpiCommand, GetRxBufferStatus};
 /// let mut get_rx_buffer_status: GetRxBufferStatus = GetRxBufferStatus::new();
 /// assert_eq!(get_rx_buffer_status.tx_buf, [0x13, 0, 0, 0]);
 /// assert_eq!(get_rx_buffer_status.rx_buf, [0; 4]);
-/// assert_eq!(get_rx_buffer_status.transfer_size(), 4);
+/// assert_eq!(get_rx_buffer_status.transfer_length(), 4);
 /// get_rx_buffer_status.rx_buf[2] = 16;
 /// get_rx_buffer_status.rx_buf[3] = 8;
 /// assert_eq!(get_rx_buffer_status.payload_length_rx(), 16);
@@ -1271,16 +1288,16 @@ impl GetRxBufferStatus {
         self.rx_buf[3]
     }
 }
-impl const Command<4> for GetRxBufferStatus {
+impl const SpiCommand for GetRxBufferStatus {
     const OPCODE: u8 = 0x13;
 
-    fn tx_buf(&self) -> &[u8; 4] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 4] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         4
     }
 }
@@ -1290,12 +1307,12 @@ impl const Command<4> for GetRxBufferStatus {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, GetPacketStatusLora};
+/// use sx126x_spi_buffers::commands::{SpiCommand, GetPacketStatusLora};
 ///
 /// let mut get_packet_status_lora: GetPacketStatusLora = GetPacketStatusLora::new();
 /// assert_eq!(get_packet_status_lora.tx_buf, [0x14, 0, 0, 0, 0]);
 /// assert_eq!(get_packet_status_lora.rx_buf, [0; 5]);
-/// assert_eq!(get_packet_status_lora.transfer_size(), 5);
+/// assert_eq!(get_packet_status_lora.transfer_length(), 5);
 /// get_packet_status_lora.rx_buf[2] = 184;
 /// get_packet_status_lora.rx_buf[3] = 0b1111_1100;
 /// get_packet_status_lora.rx_buf[4] = 162;
@@ -1325,16 +1342,16 @@ impl GetPacketStatusLora {
         -((self.rx_buf[4] / 2) as i8)
     }
 }
-impl const Command<5> for GetPacketStatusLora {
+impl const SpiCommand for GetPacketStatusLora {
     const OPCODE: u8 = 0x14;
 
-    fn tx_buf(&self) -> &[u8; 5] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 5] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         5
     }
 }
@@ -1344,12 +1361,12 @@ impl const Command<5> for GetPacketStatusLora {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, GetStatsLora};
+/// use sx126x_spi_buffers::commands::{SpiCommand, GetStatsLora};
 ///
 /// let mut get_stats_lora: GetStatsLora = GetStatsLora::new();
 /// assert_eq!(get_stats_lora.tx_buf, [0x10, 0, 0, 0, 0, 0, 0, 0]);
 /// assert_eq!(get_stats_lora.rx_buf, [0; 8]);
-/// assert_eq!(get_stats_lora.transfer_size(), 8);
+/// assert_eq!(get_stats_lora.transfer_length(), 8);
 /// get_stats_lora.rx_buf[2] = 0x51;
 /// get_stats_lora.rx_buf[3] = 0x18;
 /// get_stats_lora.rx_buf[4] = 0x03;
@@ -1381,16 +1398,16 @@ impl GetStatsLora {
         (self.rx_buf[6] as u16) << 8 | (self.rx_buf[7]) as u16
     }
 }
-impl const Command<8> for GetStatsLora {
+impl const SpiCommand for GetStatsLora {
     const OPCODE: u8 = 0x10;
 
-    fn tx_buf(&self) -> &[u8; 8] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 8] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         8
     }
 }
@@ -1400,12 +1417,12 @@ impl const Command<8> for GetStatsLora {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, ResetStats};
+/// use sx126x_spi_buffers::commands::{SpiCommand, ResetStats};
 ///
 /// const RESET_STATS: ResetStats = ResetStats::new();
 /// assert_eq!(RESET_STATS.tx_buf, [0x00, 0, 0, 0, 0, 0, 0]);
 /// assert_eq!(RESET_STATS.rx_buf, [0; 7]);
-/// assert_eq!(RESET_STATS.transfer_size(), 7);
+/// assert_eq!(RESET_STATS.transfer_length(), 7);
 /// ```
 pub struct ResetStats {
     pub tx_buf: [u8; 7],
@@ -1419,16 +1436,16 @@ impl ResetStats {
         }
     }
 }
-impl const Command<7> for ResetStats {
+impl const SpiCommand for ResetStats {
     const OPCODE: u8 = 0x00;
 
-    fn tx_buf(&self) -> &[u8; 7] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 7] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         7
     }
 }
@@ -1438,12 +1455,12 @@ impl const Command<7> for ResetStats {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, GetDeviceErrors, OpError};
+/// use sx126x_spi_buffers::commands::{SpiCommand, GetDeviceErrors, OpError};
 ///
 /// let mut get_device_errors: GetDeviceErrors = GetDeviceErrors::new();
 /// assert_eq!(get_device_errors.tx_buf, [0x17, 0, 0, 0]);
 /// assert_eq!(get_device_errors.rx_buf, [0; 4]);
-/// assert_eq!(get_device_errors.transfer_size(), 4);
+/// assert_eq!(get_device_errors.transfer_length(), 4);
 /// get_device_errors.rx_buf[2] = 0x01;
 /// get_device_errors.rx_buf[3] = 0x58;
 /// assert_eq!(get_device_errors.op_error(), OpError::new().with_pa_ramp_err(true)
@@ -1463,16 +1480,16 @@ impl GetDeviceErrors {
         OpError::from_bits((self.rx_buf[2] as u16) << 8 | self.rx_buf[3] as u16)
     }
 }
-impl const Command<4> for GetDeviceErrors {
+impl const SpiCommand for GetDeviceErrors {
     const OPCODE: u8 = 0x17;
 
-    fn tx_buf(&self) -> &[u8; 4] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 4] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         4
     }
 }
@@ -1506,12 +1523,12 @@ pub struct OpError {
 ///
 /// ## Example
 /// ```
-/// use sx126x_spi_buffers::commands::{Command, ClearDeviceErrors};
+/// use sx126x_spi_buffers::commands::{SpiCommand, ClearDeviceErrors};
 ///
 /// const CLEAR_DEVICE_ERRORS: ClearDeviceErrors = ClearDeviceErrors::new();
 /// assert_eq!(CLEAR_DEVICE_ERRORS.tx_buf, [0x07, 0, 0]);
 /// assert_eq!(CLEAR_DEVICE_ERRORS.rx_buf, [0; 3]);
-/// assert_eq!(CLEAR_DEVICE_ERRORS.transfer_size(), 3);
+/// assert_eq!(CLEAR_DEVICE_ERRORS.transfer_length(), 3);
 /// ```
 pub struct ClearDeviceErrors {
     pub tx_buf: [u8; 3],
@@ -1525,16 +1542,16 @@ impl ClearDeviceErrors {
         }
     }
 }
-impl const Command<3> for ClearDeviceErrors {
+impl const SpiCommand for ClearDeviceErrors {
     const OPCODE: u8 = 0x07;
 
-    fn tx_buf(&self) -> &[u8; 3] {
-        &self.tx_buf
+    fn tx_buf_ptr(&self) -> *const u8 {
+        self.tx_buf.as_ptr()
     }
-    fn rx_buf(&self) -> &[u8; 3] {
-        &self.rx_buf
+    fn rx_buf_ptr(&mut self) -> *mut u8 {
+        self.rx_buf.as_mut_ptr()
     }
-    fn transfer_size(&self) -> u16 {
+    fn transfer_length(&self) -> u16 {
         3
     }
 }

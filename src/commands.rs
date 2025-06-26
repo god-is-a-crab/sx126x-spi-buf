@@ -8,9 +8,9 @@ use core::marker::PhantomData;
 #[const_trait]
 pub trait SpiCommand {
     const OPCODE: u8;
-    fn tx_buf_ptr(&self) -> *const u8;
-    fn rx_buf_ptr(&mut self) -> *mut u8;
-    fn transfer_length(&self) -> u16;
+    /// Returns an SPI descriptor containing pointers to the buffers and the
+    /// length of the transfer.
+    fn descriptor(&mut self) -> SpiDescriptor;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -18,16 +18,6 @@ pub struct SpiDescriptor {
     pub tx_buf_ptr: *const u8,
     pub rx_buf_ptr: *mut u8,
     pub transfer_length: u16,
-}
-impl SpiDescriptor {
-    #[inline]
-    pub fn new<T: SpiCommand>(command: &mut T) -> Self {
-        Self {
-            tx_buf_ptr: command.tx_buf_ptr(),
-            rx_buf_ptr: command.rx_buf_ptr(),
-            transfer_length: command.transfer_length(),
-        }
-    }
 }
 
 /// # SetSleep command
@@ -40,7 +30,7 @@ impl SpiDescriptor {
 /// const SET_SLEEP: SetSleep = SetSleep::new(SleepConfig::new().with_warm_start(true));
 /// assert_eq!(SET_SLEEP.tx_buf, [0x84, 0x04]);
 /// assert_eq!(SET_SLEEP.rx_buf, [0, 0]);
-/// assert_eq!(SET_SLEEP.transfer_length(), 2);
+/// assert_eq!(SET_SLEEP.descriptor().transfer_length, 2);
 /// ``````
 pub struct SetSleep {
     pub tx_buf: [u8; 2],
@@ -57,14 +47,12 @@ impl SetSleep {
 impl const SpiCommand for SetSleep {
     const OPCODE: u8 = 0x84;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        2
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 2,
+        }
     }
 }
 #[bitfield(u8, order = Msb)]
@@ -88,7 +76,7 @@ pub struct SleepConfig {
 /// const SET_STANDBY: SetStandby = SetStandby::new(StdbyConfig::StdbyXosc);
 /// assert_eq!(SET_STANDBY.tx_buf, [0x80, 1]);
 /// assert_eq!(SET_STANDBY.rx_buf, [0, 0]);
-/// assert_eq!(SET_STANDBY.transfer_length(), 2);
+/// assert_eq!(SET_STANDBY.descriptor().transfer_length, 2);
 /// ```
 pub struct SetStandby {
     pub tx_buf: [u8; 2],
@@ -105,14 +93,12 @@ impl SetStandby {
 impl const SpiCommand for SetStandby {
     const OPCODE: u8 = 0x80;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        2
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 2,
+        }
     }
 }
 #[repr(u8)]
@@ -131,7 +117,7 @@ pub enum StdbyConfig {
 /// const SET_TX: SetTx = SetTx::new(6862921);
 /// assert_eq!(SET_TX.tx_buf, [0x83, 104, 184, 73]);
 /// assert_eq!(SET_TX.rx_buf, [0; 4]);
-/// assert_eq!(SET_TX.transfer_length(), 4);
+/// assert_eq!(SET_TX.descriptor().transfer_length, 4);
 /// ```
 pub struct SetTx {
     pub tx_buf: [u8; 4],
@@ -153,14 +139,12 @@ impl SetTx {
 impl const SpiCommand for SetTx {
     const OPCODE: u8 = 0x83;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        4
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 4,
+        }
     }
 }
 
@@ -174,7 +158,7 @@ impl const SpiCommand for SetTx {
 /// const SET_RX: SetRx = SetRx::new(120);
 /// assert_eq!(SET_RX.tx_buf, [0x82, 0, 0, 120]);
 /// assert_eq!(SET_RX.rx_buf, [0; 4]);
-/// assert_eq!(SET_RX.transfer_length(), 4);
+/// assert_eq!(SET_RX.descriptor().transfer_length, 4);
 /// ```
 pub struct SetRx {
     pub tx_buf: [u8; 4],
@@ -196,14 +180,12 @@ impl SetRx {
 impl const SpiCommand for SetRx {
     const OPCODE: u8 = 0x82;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        4
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 4,
+        }
     }
 }
 
@@ -217,7 +199,7 @@ impl const SpiCommand for SetRx {
 /// const SET_PA_CONFIG: SetPaConfig = SetPaConfig::new(0x04, 0x07);
 /// assert_eq!(SET_PA_CONFIG.tx_buf, [0x95, 0x04, 0x07, 0x00, 0x01]);
 /// assert_eq!(SET_PA_CONFIG.rx_buf, [0; 5]);
-/// assert_eq!(SET_PA_CONFIG.transfer_length(), 5);
+/// assert_eq!(SET_PA_CONFIG.descriptor().transfer_length, 5);
 /// ```
 pub struct SetPaConfig {
     pub tx_buf: [u8; 5],
@@ -234,14 +216,12 @@ impl SetPaConfig {
 impl const SpiCommand for SetPaConfig {
     const OPCODE: u8 = 0x95;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        5
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 5,
+        }
     }
 }
 
@@ -255,7 +235,7 @@ impl const SpiCommand for SetPaConfig {
 /// const WRITE_REGISTER: WriteRegister = WriteRegister::new(registers::LoraSyncWordMsb(0x48));
 /// assert_eq!(WRITE_REGISTER.tx_buf, [0x0D, 0x07, 0x40, 0x48]);
 /// assert_eq!(WRITE_REGISTER.rx_buf, [0; 4]);
-/// assert_eq!(WRITE_REGISTER.transfer_length(), 4);
+/// assert_eq!(WRITE_REGISTER.descriptor().transfer_length, 4);
 /// ```
 pub struct WriteRegister {
     pub tx_buf: [u8; 4],
@@ -277,14 +257,12 @@ impl WriteRegister {
 impl const SpiCommand for WriteRegister {
     const OPCODE: u8 = 0x0D;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        4
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 4,
+        }
     }
 }
 
@@ -298,7 +276,7 @@ impl const SpiCommand for WriteRegister {
 /// let mut read_register: ReadRegister<registers::LoraSyncWordLsb> = ReadRegister::new();
 /// assert_eq!(read_register.tx_buf, [0x1D, 0x07, 0x41, 0, 0]);
 /// assert_eq!(read_register.rx_buf, [0; 5]);
-/// assert_eq!(read_register.transfer_length(), 5);
+/// assert_eq!(read_register.descriptor().transfer_length, 5);
 /// read_register.rx_buf[4] = 0x86;
 /// assert_eq!(read_register.register(), registers::LoraSyncWordLsb(0x86));
 /// ```
@@ -331,14 +309,12 @@ where
 {
     const OPCODE: u8 = 0x1D;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        5
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 5,
+        }
     }
 }
 
@@ -356,9 +332,9 @@ where
 /// let mut write_buffer: WriteBuffer<7> = WriteBuffer::new(0x10, [b'h', b'e', b'l', b'l', b'o'].into());
 /// assert_eq!(write_buffer.tx_buf, [0x0E, 0x10, b'h', b'e', b'l', b'l', b'o']);
 /// assert_eq!(write_buffer.rx_buf, [0; 7]);
-/// assert_eq!(write_buffer.transfer_length(), 7);
+/// assert_eq!(write_buffer.descriptor().transfer_length, 7);
 /// write_buffer.set_data_length(3);
-/// assert_eq!(write_buffer.transfer_length(), 5);
+/// assert_eq!(write_buffer.descriptor().transfer_length, 5);
 /// ```
 pub struct WriteBuffer<const N: usize> {
     pub tx_buf: [u8; N],
@@ -388,14 +364,12 @@ impl<const N: usize> WriteBuffer<N> {
 impl<const N: usize> const SpiCommand for WriteBuffer<N> {
     const OPCODE: u8 = 0x0E;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        self.data_length + 2
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: self.data_length + 2,
+        }
     }
 }
 
@@ -412,11 +386,11 @@ impl<const N: usize> const SpiCommand for WriteBuffer<N> {
 /// let mut read_buffer: ReadBuffer<8> = ReadBuffer::new(0x17);
 /// assert_eq!(read_buffer.tx_buf, [0x1E, 0x17, 0, 0, 0, 0, 0, 0]);
 /// assert_eq!(read_buffer.rx_buf, [0; 8]);
-/// assert_eq!(read_buffer.transfer_length(), 8);
+/// assert_eq!(read_buffer.descriptor().transfer_length, 8);
 /// read_buffer.rx_buf[3..8].copy_from_slice(&[b'h', b'e', b'l', b'l', b'o']);
 /// assert_eq!(read_buffer.data(), &[b'h', b'e', b'l', b'l', b'o']);
 /// read_buffer.set_data_length(3);
-/// assert_eq!(read_buffer.transfer_length(), 6);
+/// assert_eq!(read_buffer.descriptor().transfer_length, 6);
 /// assert_eq!(read_buffer.data(), &[b'h', b'e', b'l']);
 /// ```
 pub struct ReadBuffer<const N: usize> {
@@ -445,14 +419,12 @@ impl<const N: usize> ReadBuffer<N> {
 impl<const N: usize> const SpiCommand for ReadBuffer<N> {
     const OPCODE: u8 = 0x1E;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        self.data_length + 3
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: self.data_length + 3,
+        }
     }
 }
 
@@ -470,7 +442,7 @@ impl<const N: usize> const SpiCommand for ReadBuffer<N> {
 /// );
 /// assert_eq!(SET_DIO_IRQ_PARAMS.tx_buf, [0x08, 0, 1, 0, 2, 2, 0, 0, 0]);
 /// assert_eq!(SET_DIO_IRQ_PARAMS.rx_buf, [0; 9]);
-/// assert_eq!(SET_DIO_IRQ_PARAMS.transfer_length(), 9);
+/// assert_eq!(SET_DIO_IRQ_PARAMS.descriptor().transfer_length, 9);
 /// ```
 pub struct SetDioIrqParams {
     pub tx_buf: [u8; 9],
@@ -499,14 +471,12 @@ impl SetDioIrqParams {
 impl const SpiCommand for SetDioIrqParams {
     const OPCODE: u8 = 0x08;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        9
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 9,
+        }
     }
 }
 #[bitfield(u16)]
@@ -549,6 +519,7 @@ pub struct Irq {
 /// let mut get_irq_status: GetIrqStatus = GetIrqStatus::new();
 /// assert_eq!(get_irq_status.tx_buf, [0x12, 0, 0, 0]);
 /// assert_eq!(get_irq_status.rx_buf, [0; 4]);
+/// assert_eq!(get_irq_status.descriptor().transfer_length, 4);
 /// get_irq_status.rx_buf[3] = 0x03;
 /// assert_eq!(get_irq_status.irq_status(), Irq::new().with_tx_done(true).with_rx_done(true).with_timeout(false));
 /// ```
@@ -571,14 +542,12 @@ impl GetIrqStatus {
 impl const SpiCommand for GetIrqStatus {
     const OPCODE: u8 = 0x12;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        4
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 4,
+        }
     }
 }
 
@@ -593,7 +562,7 @@ impl const SpiCommand for GetIrqStatus {
 ///     .with_timeout(true));
 /// assert_eq!(CLEAR_IRQ_STATUS.tx_buf, [0x02, 2, 16]);
 /// assert_eq!(CLEAR_IRQ_STATUS.rx_buf, [0; 3]);
-/// assert_eq!(CLEAR_IRQ_STATUS.transfer_length(), 3);
+/// assert_eq!(CLEAR_IRQ_STATUS.descriptor().transfer_length, 3);
 /// ```
 pub struct ClearIrqStatus {
     pub tx_buf: [u8; 3],
@@ -614,14 +583,12 @@ impl ClearIrqStatus {
 impl const SpiCommand for ClearIrqStatus {
     const OPCODE: u8 = 0x02;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        3
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 3,
+        }
     }
 }
 
@@ -635,7 +602,7 @@ impl const SpiCommand for ClearIrqStatus {
 /// const SET_DIO2_AS_RF_SWITCH_CTRL: SetDio2AsRfSwitchCtrl = SetDio2AsRfSwitchCtrl::new(true);
 /// assert_eq!(SET_DIO2_AS_RF_SWITCH_CTRL.tx_buf, [0x9D, 1]);
 /// assert_eq!(SET_DIO2_AS_RF_SWITCH_CTRL.rx_buf, [0; 2]);
-/// assert_eq!(SET_DIO2_AS_RF_SWITCH_CTRL.transfer_length(), 2);
+/// assert_eq!(SET_DIO2_AS_RF_SWITCH_CTRL.descriptor().transfer_length, 2);
 /// ```
 pub struct SetDio2AsRfSwitchCtrl {
     pub tx_buf: [u8; 2],
@@ -652,14 +619,12 @@ impl SetDio2AsRfSwitchCtrl {
 impl const SpiCommand for SetDio2AsRfSwitchCtrl {
     const OPCODE: u8 = 0x9D;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        2
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 2,
+        }
     }
 }
 
@@ -673,7 +638,7 @@ impl const SpiCommand for SetDio2AsRfSwitchCtrl {
 /// const SET_DIO3_AS_TCXO_CTRL: SetDio3AsTcxoCtrl = SetDio3AsTcxoCtrl::new(TcxoVoltage::V3_3, 3500);
 /// assert_eq!(SET_DIO3_AS_TCXO_CTRL.tx_buf, [0x97, 7, 0, 13, 172]);
 /// assert_eq!(SET_DIO3_AS_TCXO_CTRL.rx_buf, [0; 5]);
-/// assert_eq!(SET_DIO3_AS_TCXO_CTRL.transfer_length(), 5);
+/// assert_eq!(SET_DIO3_AS_TCXO_CTRL.descriptor().transfer_length, 5);
 /// ```
 pub struct SetDio3AsTcxoCtrl {
     pub tx_buf: [u8; 5],
@@ -696,14 +661,12 @@ impl SetDio3AsTcxoCtrl {
 impl const SpiCommand for SetDio3AsTcxoCtrl {
     const OPCODE: u8 = 0x97;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        5
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 5,
+        }
     }
 }
 #[repr(u8)]
@@ -728,7 +691,7 @@ pub enum TcxoVoltage {
 /// const SET_RF_FREQUENCY: SetRfFrequency = SetRfFrequency::new(455_081_984);
 /// assert_eq!(SET_RF_FREQUENCY.tx_buf, [0x86, 0x1B, 0x20, 0, 0]);
 /// assert_eq!(SET_RF_FREQUENCY.rx_buf, [0; 5]);
-/// assert_eq!(SET_RF_FREQUENCY.transfer_length(), 5);
+/// assert_eq!(SET_RF_FREQUENCY.descriptor().transfer_length, 5);
 /// ```
 pub struct SetRfFrequency {
     pub tx_buf: [u8; 5],
@@ -751,14 +714,12 @@ impl SetRfFrequency {
 impl const SpiCommand for SetRfFrequency {
     const OPCODE: u8 = 0x86;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        5
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 5,
+        }
     }
 }
 
@@ -771,7 +732,7 @@ impl const SpiCommand for SetRfFrequency {
 /// const SET_PACKET_TYPE: SetPacketType = SetPacketType::new(PacketType::Lora);
 /// assert_eq!(SET_PACKET_TYPE.tx_buf, [0x8A, 0x01]);
 /// assert_eq!(SET_PACKET_TYPE.rx_buf, [0; 2]);
-/// assert_eq!(SET_PACKET_TYPE.transfer_length(), 2);
+/// assert_eq!(SET_PACKET_TYPE.descriptor().transfer_length, 2);
 /// ```
 pub struct SetPacketType {
     pub tx_buf: [u8; 2],
@@ -788,14 +749,12 @@ impl SetPacketType {
 impl const SpiCommand for SetPacketType {
     const OPCODE: u8 = 0x8A;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        2
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 2,
+        }
     }
 }
 #[repr(u8)]
@@ -821,7 +780,7 @@ impl PacketType {
 /// const GET_PACKET_TYPE: GetPacketType = GetPacketType::new();
 /// assert_eq!(GET_PACKET_TYPE.tx_buf, [0x11, 0, 0]);
 /// assert_eq!(GET_PACKET_TYPE.rx_buf, [0; 3]);
-/// assert_eq!(GET_PACKET_TYPE.transfer_length(), 3);
+/// assert_eq!(GET_PACKET_TYPE.descriptor().transfer_length, 3);
 /// assert_eq!(GET_PACKET_TYPE.packet_type(), PacketType::Gfsk);
 /// ```
 pub struct GetPacketType {
@@ -842,14 +801,12 @@ impl GetPacketType {
 impl const SpiCommand for GetPacketType {
     const OPCODE: u8 = 0x11;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        3
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 3,
+        }
     }
 }
 
@@ -862,7 +819,7 @@ impl const SpiCommand for GetPacketType {
 /// const SET_TX_PARAMS: SetTxParams = SetTxParams::new(22, RampTime::Ramp200U);
 /// assert_eq!(SET_TX_PARAMS.tx_buf, [0x8E, 22, 4]);
 /// assert_eq!(SET_TX_PARAMS.rx_buf, [0; 3]);
-/// assert_eq!(SET_TX_PARAMS.transfer_length(), 3);
+/// assert_eq!(SET_TX_PARAMS.descriptor().transfer_length, 3);
 /// ```
 pub struct SetTxParams {
     pub tx_buf: [u8; 3],
@@ -879,14 +836,12 @@ impl SetTxParams {
 impl const SpiCommand for SetTxParams {
     const OPCODE: u8 = 0x8E;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        3
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 3,
+        }
     }
 }
 #[repr(u8)]
@@ -921,7 +876,7 @@ impl RampTime {
 /// );
 /// assert_eq!(SET_MODULATION_PARAMS_LORA.tx_buf, [0x8B, 0x0A, 0x04, 0x01, 0]);
 /// assert_eq!(SET_MODULATION_PARAMS_LORA.rx_buf, [0; 5]);
-/// assert_eq!(SET_MODULATION_PARAMS_LORA.transfer_length(), 5);
+/// assert_eq!(SET_MODULATION_PARAMS_LORA.descriptor().transfer_length, 5);
 /// ```
 pub struct SetModulationParamsLora {
     pub tx_buf: [u8; 5],
@@ -944,14 +899,12 @@ impl SetModulationParamsLora {
 impl const SpiCommand for SetModulationParamsLora {
     const OPCODE: u8 = 0x8B;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        5
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 5,
+        }
     }
 }
 #[repr(u8)]
@@ -1033,7 +986,7 @@ impl Cr {
 /// );
 /// assert_eq!(SET_PACKET_PARAMS.tx_buf, [0x8C, 0, 8, 0, 14, 0, 0]);
 /// assert_eq!(SET_PACKET_PARAMS.rx_buf, [0; 7]);
-/// assert_eq!(SET_PACKET_PARAMS.transfer_length(), 7);
+/// assert_eq!(SET_PACKET_PARAMS.descriptor().transfer_length, 7);
 /// ```
 pub struct SetPacketParams {
     pub tx_buf: [u8; 7],
@@ -1064,14 +1017,12 @@ impl SetPacketParams {
 impl const SpiCommand for SetPacketParams {
     const OPCODE: u8 = 0x8C;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        7
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 7,
+        }
     }
 }
 #[repr(u8)]
@@ -1106,7 +1057,7 @@ impl InvertIq {
 /// const SET_BUFFER_BASE_ADDRESS: SetBufferBaseAddress = SetBufferBaseAddress::new(0x00, 0x80);
 /// assert_eq!(SET_BUFFER_BASE_ADDRESS.tx_buf, [0x8F, 0, 128]);
 /// assert_eq!(SET_BUFFER_BASE_ADDRESS.rx_buf, [0; 3]);
-/// assert_eq!(SET_BUFFER_BASE_ADDRESS.transfer_length(), 3);
+/// assert_eq!(SET_BUFFER_BASE_ADDRESS.descriptor().transfer_length, 3);
 /// ```
 pub struct SetBufferBaseAddress {
     pub tx_buf: [u8; 3],
@@ -1123,14 +1074,12 @@ impl SetBufferBaseAddress {
 impl const SpiCommand for SetBufferBaseAddress {
     const OPCODE: u8 = 0x8F;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        3
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 3,
+        }
     }
 }
 
@@ -1144,7 +1093,7 @@ impl const SpiCommand for SetBufferBaseAddress {
 /// const SET_LORA_SYMB_NUM_TIMEOUT: SetLoraSymbNumTimeout = SetLoraSymbNumTimeout::new(5);
 /// assert_eq!(SET_LORA_SYMB_NUM_TIMEOUT.tx_buf, [0xA0, 5]);
 /// assert_eq!(SET_LORA_SYMB_NUM_TIMEOUT.rx_buf, [0; 2]);
-/// assert_eq!(SET_LORA_SYMB_NUM_TIMEOUT.transfer_length(), 2);
+/// assert_eq!(SET_LORA_SYMB_NUM_TIMEOUT.descriptor().transfer_length, 2);
 /// ```
 pub struct SetLoraSymbNumTimeout {
     pub tx_buf: [u8; 2],
@@ -1161,14 +1110,12 @@ impl SetLoraSymbNumTimeout {
 impl const SpiCommand for SetLoraSymbNumTimeout {
     const OPCODE: u8 = 0xA0;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        2
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 2,
+        }
     }
 }
 
@@ -1181,7 +1128,7 @@ impl const SpiCommand for SetLoraSymbNumTimeout {
 /// let mut get_status: GetStatus = GetStatus::new();
 /// assert_eq!(get_status.tx_buf, [0xC0, 0]);
 /// assert_eq!(get_status.rx_buf, [0; 2]);
-/// assert_eq!(get_status.transfer_length(), 2);
+/// assert_eq!(get_status.descriptor().transfer_length, 2);
 /// get_status.rx_buf[1] = 0x64;
 /// assert_eq!(get_status.chip_mode(), StatusChipMode::Tx);
 /// assert_eq!(get_status.command_status(), StatusCommandStatus::DataIsAvailableToHost);
@@ -1209,14 +1156,12 @@ impl GetStatus {
 impl const SpiCommand for GetStatus {
     const OPCODE: u8 = 0xC0;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        2
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 2,
+        }
     }
 }
 #[repr(u8)]
@@ -1264,7 +1209,7 @@ impl StatusCommandStatus {
 /// let mut get_rx_buffer_status: GetRxBufferStatus = GetRxBufferStatus::new();
 /// assert_eq!(get_rx_buffer_status.tx_buf, [0x13, 0, 0, 0]);
 /// assert_eq!(get_rx_buffer_status.rx_buf, [0; 4]);
-/// assert_eq!(get_rx_buffer_status.transfer_length(), 4);
+/// assert_eq!(get_rx_buffer_status.descriptor().transfer_length, 4);
 /// get_rx_buffer_status.rx_buf[2] = 16;
 /// get_rx_buffer_status.rx_buf[3] = 8;
 /// assert_eq!(get_rx_buffer_status.payload_length_rx(), 16);
@@ -1291,14 +1236,12 @@ impl GetRxBufferStatus {
 impl const SpiCommand for GetRxBufferStatus {
     const OPCODE: u8 = 0x13;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        4
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 4,
+        }
     }
 }
 
@@ -1312,7 +1255,7 @@ impl const SpiCommand for GetRxBufferStatus {
 /// let mut get_packet_status_lora: GetPacketStatusLora = GetPacketStatusLora::new();
 /// assert_eq!(get_packet_status_lora.tx_buf, [0x14, 0, 0, 0, 0]);
 /// assert_eq!(get_packet_status_lora.rx_buf, [0; 5]);
-/// assert_eq!(get_packet_status_lora.transfer_length(), 5);
+/// assert_eq!(get_packet_status_lora.descriptor().transfer_length, 5);
 /// get_packet_status_lora.rx_buf[2] = 184;
 /// get_packet_status_lora.rx_buf[3] = 0b1111_1100;
 /// get_packet_status_lora.rx_buf[4] = 162;
@@ -1345,14 +1288,12 @@ impl GetPacketStatusLora {
 impl const SpiCommand for GetPacketStatusLora {
     const OPCODE: u8 = 0x14;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        5
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 5,
+        }
     }
 }
 
@@ -1366,7 +1307,7 @@ impl const SpiCommand for GetPacketStatusLora {
 /// let mut get_stats_lora: GetStatsLora = GetStatsLora::new();
 /// assert_eq!(get_stats_lora.tx_buf, [0x10, 0, 0, 0, 0, 0, 0, 0]);
 /// assert_eq!(get_stats_lora.rx_buf, [0; 8]);
-/// assert_eq!(get_stats_lora.transfer_length(), 8);
+/// assert_eq!(get_stats_lora.descriptor().transfer_length, 8);
 /// get_stats_lora.rx_buf[2] = 0x51;
 /// get_stats_lora.rx_buf[3] = 0x18;
 /// get_stats_lora.rx_buf[4] = 0x03;
@@ -1401,14 +1342,12 @@ impl GetStatsLora {
 impl const SpiCommand for GetStatsLora {
     const OPCODE: u8 = 0x10;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        8
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 8,
+        }
     }
 }
 
@@ -1422,7 +1361,7 @@ impl const SpiCommand for GetStatsLora {
 /// const RESET_STATS: ResetStats = ResetStats::new();
 /// assert_eq!(RESET_STATS.tx_buf, [0x00, 0, 0, 0, 0, 0, 0]);
 /// assert_eq!(RESET_STATS.rx_buf, [0; 7]);
-/// assert_eq!(RESET_STATS.transfer_length(), 7);
+/// assert_eq!(RESET_STATS.descriptor().transfer_length, 7);
 /// ```
 pub struct ResetStats {
     pub tx_buf: [u8; 7],
@@ -1439,14 +1378,12 @@ impl ResetStats {
 impl const SpiCommand for ResetStats {
     const OPCODE: u8 = 0x00;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        7
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 7,
+        }
     }
 }
 
@@ -1460,7 +1397,7 @@ impl const SpiCommand for ResetStats {
 /// let mut get_device_errors: GetDeviceErrors = GetDeviceErrors::new();
 /// assert_eq!(get_device_errors.tx_buf, [0x17, 0, 0, 0]);
 /// assert_eq!(get_device_errors.rx_buf, [0; 4]);
-/// assert_eq!(get_device_errors.transfer_length(), 4);
+/// assert_eq!(get_device_errors.descriptor().transfer_length, 4);
 /// get_device_errors.rx_buf[2] = 0x01;
 /// get_device_errors.rx_buf[3] = 0x58;
 /// assert_eq!(get_device_errors.op_error(), OpError::new().with_pa_ramp_err(true)
@@ -1483,14 +1420,12 @@ impl GetDeviceErrors {
 impl const SpiCommand for GetDeviceErrors {
     const OPCODE: u8 = 0x17;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        4
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 4,
+        }
     }
 }
 #[bitfield(u16)]
@@ -1528,7 +1463,7 @@ pub struct OpError {
 /// const CLEAR_DEVICE_ERRORS: ClearDeviceErrors = ClearDeviceErrors::new();
 /// assert_eq!(CLEAR_DEVICE_ERRORS.tx_buf, [0x07, 0, 0]);
 /// assert_eq!(CLEAR_DEVICE_ERRORS.rx_buf, [0; 3]);
-/// assert_eq!(CLEAR_DEVICE_ERRORS.transfer_length(), 3);
+/// assert_eq!(CLEAR_DEVICE_ERRORS.descriptor().transfer_length, 3);
 /// ```
 pub struct ClearDeviceErrors {
     pub tx_buf: [u8; 3],
@@ -1545,13 +1480,11 @@ impl ClearDeviceErrors {
 impl const SpiCommand for ClearDeviceErrors {
     const OPCODE: u8 = 0x07;
 
-    fn tx_buf_ptr(&self) -> *const u8 {
-        self.tx_buf.as_ptr()
-    }
-    fn rx_buf_ptr(&mut self) -> *mut u8 {
-        self.rx_buf.as_mut_ptr()
-    }
-    fn transfer_length(&self) -> u16 {
-        3
+    fn descriptor(&mut self) -> SpiDescriptor {
+        SpiDescriptor {
+            tx_buf_ptr: self.tx_buf.as_ptr(),
+            rx_buf_ptr: self.rx_buf.as_mut_ptr(),
+            transfer_length: 3,
+        }
     }
 }

@@ -13,21 +13,22 @@ pub mod registers;
 
 #[cfg(test)]
 mod tests {
-    use super::commands::{self, SpiDescriptor};
+    use super::commands::{
+        self, SetSleep, SetStandby, SleepConfig, SpiCommand, StdbyConfig, WriteBuffer,
+    };
     use static_fifo_queue::Queue;
+
     #[test]
     fn test_queue() {
-        let mut queue: Queue<SpiDescriptor, 8> = Queue::new();
-        static mut SET_SLEEP: commands::SetSleep =
-            commands::SetSleep::new(commands::SleepConfig::new().with_warm_start(true));
-        static mut SET_STANDY: commands::SetStandby =
-            commands::SetStandby::new(commands::StdbyConfig::StdbyRc);
-        static mut WRITE_BUFFER: commands::WriteBuffer<7> =
-            commands::WriteBuffer::new(0, [2, 4, 7, 9, 3]);
+        let mut queue: Queue<commands::SpiDescriptor, 8> = Queue::new();
+        static mut SET_SLEEP: SetSleep =
+            commands::SetSleep::new(SleepConfig::new().with_warm_start(true));
+        static mut SET_STANDY: SetStandby = commands::SetStandby::new(StdbyConfig::StdbyRc);
+        static mut WRITE_BUFFER: WriteBuffer<7> = commands::WriteBuffer::new(0, [2, 4, 7, 9, 3]);
         unsafe {
-            queue.enqueue(SpiDescriptor::new(&mut SET_SLEEP));
-            queue.enqueue(SpiDescriptor::new(&mut SET_STANDY));
-            queue.enqueue(SpiDescriptor::new(&mut WRITE_BUFFER));
+            queue.enqueue(SET_SLEEP.descriptor());
+            queue.enqueue(SET_STANDY.descriptor());
+            queue.enqueue(WRITE_BUFFER.descriptor());
 
             let mut desc = queue.dequeue().unwrap();
             let mut tx_buf =

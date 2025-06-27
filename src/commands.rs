@@ -1498,3 +1498,98 @@ impl ClearDeviceErrors {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::registers::LoraSyncWordMsb;
+
+    #[test]
+    fn test_set_standby_rc() {
+        static SET_STANDBY_RC: SetStandby = SetStandby::new(StdbyConfig::StdbyRc);
+        assert_eq!(SET_STANDBY_RC.tx_buf, [0x80, 0])
+    }
+
+    #[test]
+    fn test_set_packet_type() {
+        static SET_PACKET_TYPE: SetPacketType = SetPacketType::new(PacketType::Lora);
+        assert_eq!(SET_PACKET_TYPE.tx_buf, [0x8A, 0x01]);
+    }
+
+    #[test]
+    fn test_set_rf_frequency() {
+        static SET_RF_FREQUENCY: SetRfFrequency = SetRfFrequency::new(455_081_984);
+        assert_eq!(SET_RF_FREQUENCY.tx_buf, [0x86, 0x1B, 0x20, 0, 0]);
+    }
+
+    #[test]
+    fn test_set_buffer_base_address() {
+        static SET_BUFFER_BASE_ADDRESS: SetBufferBaseAddress =
+            SetBufferBaseAddress::new(0x00, 0x80);
+        assert_eq!(SET_BUFFER_BASE_ADDRESS.tx_buf, [0x8F, 0, 0x80]);
+    }
+
+    #[test]
+    fn test_set_mod_params() {
+        static SET_MODULATION_PARAMS_LORA: SetModulationParamsLora =
+            SetModulationParamsLora::new(Sf::Sf10, Bw::Bw125, Cr::Cr4_5, false);
+        assert_eq!(
+            SET_MODULATION_PARAMS_LORA.tx_buf,
+            [0x8B, 0x0A, 0x04, 0x01, 0]
+        );
+    }
+
+    #[test]
+    fn test_set_packet_params() {
+        static SET_PACKET_PARAMS: SetPacketParams =
+            SetPacketParams::new(8, HeaderType::VariableLength, 3, false, InvertIq::Standard);
+        assert_eq!(SET_PACKET_PARAMS.tx_buf, [0x8C, 0, 8, 0, 3, 0, 0]);
+    }
+
+    #[test]
+    fn test_set_dio_irq_params() {
+        static SET_DIO_IRQ_PARAMS: SetDioIrqParams = SetDioIrqParams::new(
+            Irq::new().with_tx_done(true).with_rx_done(true),
+            Irq::new().with_tx_done(true).with_rx_done(true),
+            Irq::new(),
+            Irq::new(),
+        );
+        assert_eq!(SET_DIO_IRQ_PARAMS.tx_buf, [0x08, 0, 3, 0, 3, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_write_sync_word() {
+        static WRITE_SYNC_WORD: WriteRegister = WriteRegister::new(LoraSyncWordMsb(0x14));
+        assert_eq!(WRITE_SYNC_WORD.tx_buf, [0x0D, 0x07, 0x40, 0x14]);
+    }
+
+    #[test]
+    fn test_set_pa_config() {
+        static SET_PA_CONFIG: SetPaConfig = SetPaConfig::new(0x04, 0x07);
+        assert_eq!(SET_PA_CONFIG.tx_buf, [0x95, 0x04, 0x07, 0x00, 0x01]);
+    }
+
+    #[test]
+    fn test_set_tx_params() {
+        static SET_TX_PARAMS: SetTxParams = SetTxParams::new(22, RampTime::Ramp200U);
+        assert_eq!(SET_TX_PARAMS.tx_buf, [0x8E, 0x16, 4]);
+    }
+
+    #[test]
+    fn test_set_dio2_rf_switch_ctrl() {
+        static SET_DIO2_RF_SWITCH_CTRL: SetDio2AsRfSwitchCtrl = SetDio2AsRfSwitchCtrl::new(true);
+        assert_eq!(SET_DIO2_RF_SWITCH_CTRL.tx_buf, [0x9D, 1]);
+    }
+
+    #[test]
+    fn test_write_buffer() {
+        static WRITE_BUFFER: WriteBuffer<5> = WriteBuffer::new(0x00, [0x00, 0x00, 0x00]);
+        assert_eq!(WRITE_BUFFER.tx_buf, [0x0E, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_set_tx() {
+        static SET_TX: SetTx = SetTx::new(0x00);
+        assert_eq!(SET_TX.tx_buf, [0x83, 0, 0, 0]);
+    }
+}
